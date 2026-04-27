@@ -88,23 +88,31 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   font-weight: 500;
   color: var(--text);
 }
-.brand-mark {
-  width: 34px; height: 34px;
-  border-radius: 8px;
-  display: inline-grid;
-  place-items: center;
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff;
-  font-size: .82rem;
-  letter-spacing: .04em;
+.brand-logo {
+  height: 28px;
+  width: auto;
+  display: block;
 }
-.brand-text strong { font-weight: 700; }
+.brand-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+}
+.brand-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: .95rem;
+  letter-spacing: .02em;
+  color: var(--text-dim);
+}
+.footer-logo {
+  height: 26px;
+  width: auto;
+  display: block;
+}
 
 .nav-list {
   list-style: none;
