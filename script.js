@@ -22,6 +22,10 @@ const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
 // Carousels
+const PREFERS_REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const AUTOPLAY_INTERVAL = 5000;
+const RESUME_AFTER_INTERACTION = 8000;
+
 function initCarousel(carousel) {
   const track = carousel.querySelector('.carousel-track');
   const slides = Array.from(carousel.querySelectorAll('.carousel-slide'));
@@ -38,6 +42,43 @@ function initCarousel(carousel) {
     return;
   }
 
+  let activeIdx = 0;
+  let autoplayTimer = null;
+  let resumeTimer = null;
+  let visible = !document.hidden;
+  let inViewport = false;
+  let isHovered = false;
+
+  const goTo = (idx) => {
+    track.scrollTo({ left: slides[idx].offsetLeft, behavior: 'smooth' });
+  };
+
+  const tick = () => {
+    const nextIdx = (activeIdx + 1) % slides.length;
+    goTo(nextIdx);
+  };
+
+  const startAutoplay = () => {
+    if (PREFERS_REDUCED) return;
+    if (!visible || !inViewport || isHovered) return;
+    if (autoplayTimer) return;
+    autoplayTimer = setInterval(tick, AUTOPLAY_INTERVAL);
+  };
+
+  const stopAutoplay = () => {
+    if (autoplayTimer) {
+      clearInterval(autoplayTimer);
+      autoplayTimer = null;
+    }
+  };
+
+  const pauseTemporarily = () => {
+    stopAutoplay();
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(startAutoplay, RESUME_AFTER_INTERACTION);
+  };
+
+  // Build dots
   slides.forEach((_, i) => {
     const dot = document.createElement('button');
     dot.type = 'button';
@@ -45,13 +86,12 @@ function initCarousel(carousel) {
     dot.setAttribute('role', 'tab');
     dot.setAttribute('aria-label', `Imagem ${i + 1} de ${slides.length}`);
     dot.addEventListener('click', () => {
-      track.scrollTo({ left: slides[i].offsetLeft, behavior: 'smooth' });
+      goTo(i);
+      pauseTemporarily();
     });
     dotsBox.appendChild(dot);
   });
   const dots = Array.from(dotsBox.querySelectorAll('.carousel-dot'));
-
-  let activeIdx = 0;
   dots[0].classList.add('is-active');
 
   const update = () => {
@@ -77,10 +117,42 @@ function initCarousel(carousel) {
 
   prev.addEventListener('click', () => {
     track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
+    pauseTemporarily();
   });
   next.addEventListener('click', () => {
     track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
+    pauseTemporarily();
   });
+
+  // Pause on hover (desktop) and on focus
+  carousel.addEventListener('mouseenter', () => { isHovered = true; stopAutoplay(); });
+  carousel.addEventListener('mouseleave', () => { isHovered = false; startAutoplay(); });
+  carousel.addEventListener('focusin', stopAutoplay);
+  carousel.addEventListener('focusout', startAutoplay);
+
+  // Pause on touch/wheel scroll then resume after a beat
+  track.addEventListener('touchstart', pauseTemporarily, { passive: true });
+  track.addEventListener('wheel', pauseTemporarily, { passive: true });
+
+  // Pause when tab is hidden
+  document.addEventListener('visibilitychange', () => {
+    visible = !document.hidden;
+    if (visible) startAutoplay(); else stopAutoplay();
+  });
+
+  // Pause when carousel is out of viewport
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        inViewport = entry.isIntersecting;
+        if (inViewport) startAutoplay(); else stopAutoplay();
+      });
+    }, { threshold: 0.35 });
+    io.observe(carousel);
+  } else {
+    inViewport = true;
+    startAutoplay();
+  }
 }
 
 document.querySelectorAll('[data-carousel]').forEach(initCarousel);
