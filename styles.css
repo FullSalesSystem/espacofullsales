@@ -346,35 +346,6 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   object-fit: cover;
   display: block;
 }
-.carousel-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 42px;
-  height: 42px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--text);
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
-  z-index: 2;
-  transition: background .2s ease, opacity .2s ease, transform .2s ease;
-}
-.carousel-btn:hover:not(:disabled) {
-  background: rgba(255, 61, 87, 0.85);
-  border-color: rgba(255, 61, 87, 0.85);
-}
-.carousel-btn:disabled {
-  opacity: 0;
-  pointer-events: none;
-}
-.carousel-prev { left: 14px; }
-.carousel-next { right: 14px; }
 .carousel-dots {
   position: absolute;
   left: 50%;
@@ -409,9 +380,6 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 }
 
 @media (max-width: 600px) {
-  .carousel-btn { width: 36px; height: 36px; }
-  .carousel-prev { left: 8px; }
-  .carousel-next { right: 8px; }
   .carousel-dots { bottom: 12px; padding: 6px 10px; }
 }
 .tour-text h3 {
