@@ -29,15 +29,11 @@ const RESUME_AFTER_INTERACTION = 8000;
 function initCarousel(carousel) {
   const track = carousel.querySelector('.carousel-track');
   const slides = Array.from(carousel.querySelectorAll('.carousel-slide'));
-  const prev = carousel.querySelector('.carousel-prev');
-  const next = carousel.querySelector('.carousel-next');
   const dotsBox = carousel.querySelector('.carousel-dots');
 
   if (!track || slides.length === 0) return;
 
   if (slides.length <= 1) {
-    prev?.remove();
-    next?.remove();
     dotsBox?.remove();
     return;
   }
@@ -104,8 +100,6 @@ function initCarousel(carousel) {
       dots[idx]?.classList.add('is-active');
       activeIdx = idx;
     }
-    prev.disabled = idx === 0;
-    next.disabled = idx === slides.length - 1;
   };
   update();
 
@@ -113,15 +107,6 @@ function initCarousel(carousel) {
   track.addEventListener('scroll', () => {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(update);
-  });
-
-  prev.addEventListener('click', () => {
-    track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
-    pauseTemporarily();
-  });
-  next.addEventListener('click', () => {
-    track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
-    pauseTemporarily();
   });
 
   // Pause on hover (desktop) and on focus
