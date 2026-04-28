@@ -88,7 +88,6 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
   font-weight: 500;
   color: var(--text);
 }
@@ -96,17 +95,6 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   height: 28px;
   width: auto;
   display: block;
-}
-.brand-divider {
-  width: 1px;
-  height: 22px;
-  background: var(--line);
-}
-.brand-text {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: .95rem;
-  letter-spacing: .02em;
-  color: var(--text-dim);
 }
 .footer-logo {
   height: 26px;
@@ -167,22 +155,26 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   position: absolute;
   inset: 0;
   z-index: 0;
+  background: #0b0d10;
   overflow: hidden;
-  background:
-    radial-gradient(70% 60% at 30% 30%, rgba(255, 61, 87, 0.22), transparent 60%),
-    radial-gradient(60% 60% at 90% 90%, rgba(255, 122, 61, 0.16), transparent 60%),
-    linear-gradient(180deg, #14171d 0%, #0b0d10 100%);
+}
+.hero-bg img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.45;
+  filter: saturate(1.05);
 }
 .hero-bg::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 75%);
+  background:
+    radial-gradient(70% 60% at 30% 30%, rgba(255, 61, 87, 0.18), transparent 60%),
+    radial-gradient(60% 60% at 90% 90%, rgba(255, 122, 61, 0.14), transparent 60%),
+    linear-gradient(180deg, rgba(11, 13, 16, 0.55) 0%, rgba(11, 13, 16, 0.92) 100%);
 }
 .hero-inner {
   position: relative;
