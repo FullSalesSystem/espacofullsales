@@ -439,6 +439,33 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 }
 .tag:hover { border-color: var(--accent); color: var(--accent); }
 
+/* -------- Location perks -------- */
+.location-perks {
+  list-style: none;
+  margin: 0 0 28px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.location-perks li {
+  position: relative;
+  padding-left: 26px;
+  color: var(--text-dim);
+  font-size: .98rem;
+}
+.location-perks li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
 /* -------- Map -------- */
 .map-wrap {
   position: relative;
