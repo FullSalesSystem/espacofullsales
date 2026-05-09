@@ -420,78 +420,123 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 .features h3 { margin-bottom: 6px; font-size: 1.05rem; }
 .features p { font-size: .92rem; margin: 0; }
 
-/* -------- Reasons (Por que escolher) -------- */
-.reasons-hero {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  padding: 22px 28px;
-  margin-bottom: 28px;
-  border-radius: var(--radius);
-  background:
-    linear-gradient(135deg, rgba(255, 61, 87, 0.16), rgba(255, 122, 61, 0.08));
-  border: 1px solid rgba(255, 61, 87, 0.32);
-}
-.reasons-hero-num {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: var(--accent);
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-.reasons-hero p {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: var(--text);
-}
-
+/* -------- Reasons (Por que escolher) — bento -------- */
 .reasons {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
 }
-.reasons li {
+.reason-card {
   position: relative;
+  grid-column: span 2;
   background: var(--bg-3);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 26px 26px 24px;
-  transition: border-color .2s ease, transform .2s ease;
+  padding: 26px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color .25s ease, transform .25s ease, background .25s ease;
 }
-.reasons li:hover {
-  border-color: rgba(255, 61, 87, 0.4);
-  transform: translateY(-2px);
+.reason-card:hover {
+  border-color: rgba(255, 61, 87, 0.5);
+  transform: translateY(-3px);
 }
-.reason-num {
-  display: block;
+.reason-card--xl { grid-column: span 4; }
+.reason-card--lg { grid-column: span 3; }
+
+.reason-card--feature {
+  background:
+    linear-gradient(135deg, rgba(255, 61, 87, 0.18), rgba(255, 122, 61, 0.08)) padding-box,
+    var(--bg-3);
+  border-color: rgba(255, 61, 87, 0.35);
+}
+.reason-card--feature:hover {
+  border-color: rgba(255, 61, 87, 0.6);
+}
+
+.reason-card--stat {
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(255, 61, 87, 0.18), transparent 60%),
+    var(--bg-3);
+}
+
+.reason-card .reason-num {
+  display: inline-block;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.35rem;
+  font-size: .95rem;
   font-weight: 700;
   color: var(--accent);
+  letter-spacing: 0.06em;
   line-height: 1;
-  letter-spacing: 0.02em;
-  margin-bottom: 14px;
+  margin: 0 0 4px;
 }
-.reasons li p {
+.reason-card--feature .reason-num,
+.reason-card--xl .reason-num {
+  font-size: 1.05rem;
+}
+
+.reason-card h3 {
+  font-size: 1.1rem;
   margin: 0;
-  font-size: .96rem;
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+}
+.reason-card--xl h3,
+.reason-card--feature h3 {
+  font-size: clamp(1.25rem, 2.2vw, 1.55rem);
+}
+.reason-card p {
+  margin: 0;
+  font-size: .95rem;
   line-height: 1.55;
   color: var(--text-dim);
 }
-.reasons li strong {
-  color: var(--text);
-  font-weight: 600;
+.reason-card--feature p,
+.reason-card--xl p {
+  font-size: 1rem;
 }
 
-@media (max-width: 600px) {
-  .reasons-hero { flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; }
-  .reasons-hero-num { font-size: 1.8rem; }
-  .reasons-hero p { font-size: 1rem; }
+.stat-big {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.5rem, 5vw, 3.4rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  display: inline-block;
+  margin-right: 4px;
+}
+.reason-card--stat h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-dim);
+  text-transform: lowercase;
+  letter-spacing: 0;
+}
+
+@media (max-width: 920px) {
+  .reasons { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .reason-card,
+  .reason-card--xl,
+  .reason-card--lg { grid-column: span 1; }
+  .reason-card--feature { grid-column: span 2; }
+}
+@media (max-width: 540px) {
+  .reasons { grid-template-columns: 1fr; }
+  .reason-card,
+  .reason-card--xl,
+  .reason-card--lg,
+  .reason-card--feature { grid-column: span 1; }
 }
 
 /* -------- Tags -------- */
