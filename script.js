@@ -144,7 +144,7 @@ document.querySelectorAll('[data-carousel]').forEach(initCarousel);
 
 // Subtle reveal-on-scroll for sections
 const revealTargets = document.querySelectorAll(
-  '.section-head, .tour-item, .features li, .hero-meta li, .map-wrap, .cta-inner'
+  '.section-head, .tour-item, .features li, .reasons li, .reasons-hero, .hero-meta li, .map-wrap, .cta-inner'
 );
 
 if ('IntersectionObserver' in window && revealTargets.length) {
