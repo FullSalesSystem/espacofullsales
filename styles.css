@@ -420,6 +420,80 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 .features h3 { margin-bottom: 6px; font-size: 1.05rem; }
 .features p { font-size: .92rem; margin: 0; }
 
+/* -------- Reasons (Por que escolher) -------- */
+.reasons-hero {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 22px 28px;
+  margin-bottom: 28px;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(255, 61, 87, 0.16), rgba(255, 122, 61, 0.08));
+  border: 1px solid rgba(255, 61, 87, 0.32);
+}
+.reasons-hero-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.reasons-hero p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.reasons li {
+  position: relative;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px 26px 24px;
+  transition: border-color .2s ease, transform .2s ease;
+}
+.reasons li:hover {
+  border-color: rgba(255, 61, 87, 0.4);
+  transform: translateY(-2px);
+}
+.reason-num {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  margin-bottom: 14px;
+}
+.reasons li p {
+  margin: 0;
+  font-size: .96rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.reasons li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .reasons-hero { flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; }
+  .reasons-hero-num { font-size: 1.8rem; }
+  .reasons-hero p { font-size: 1rem; }
+}
+
 /* -------- Tags -------- */
 .tags {
   display: flex;
