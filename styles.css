@@ -611,13 +611,13 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 10px 14px;
 }
 .field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 0 0 16px;
+  gap: 5px;
+  margin: 0 0 10px;
   border: 0;
   padding: 0;
   min-width: 0;
@@ -641,8 +641,8 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   color: var(--text);
   background: var(--bg-3);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 13px 15px;
+  border-radius: 10px;
+  padding: 10px 14px;
   transition: border-color .2s ease, box-shadow .2s ease;
   appearance: none;
   -webkit-appearance: none;
@@ -676,8 +676,8 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   min-width: 120px;
   background: var(--bg-3);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 13px 16px;
+  border-radius: 10px;
+  padding: 10px 16px;
   cursor: pointer;
   font-size: .98rem;
   color: var(--text);
@@ -745,7 +745,7 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 }
 .modal-sub {
   color: var(--text-dim);
-  margin-bottom: 28px;
+  margin-bottom: 18px;
 }
 .modal-close {
   position: absolute;

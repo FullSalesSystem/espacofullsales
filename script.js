@@ -292,15 +292,17 @@ if (leadForm) {
       eventos_presenciais: get('eventos'),
     });
 
-    // Swap form for the result message
+    // Swap form (and intro) for the result message
     leadForm.hidden = true;
+    const introEl = document.getElementById('lead-intro');
+    if (introEl) introEl.hidden = true;
     if (resultEl) resultEl.hidden = false;
 
     if (isQualified) {
       if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
       if (resultMsg) {
         resultMsg.textContent =
-          'Se você é de São Paulo e quer agilizar seu atendimento, entre em contato pelo WhatsApp';
+          'Se você quer agilizar o seu atendimento, entre em contato pelo WhatsApp';
       }
       if (resultWa) {
         resultWa.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
