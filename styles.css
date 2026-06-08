@@ -712,6 +712,91 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   .field--wide { grid-column: span 1; }
 }
 
+/* -------- Lead modal -------- */
+.lead-modal {
+  width: min(680px, 100%);
+  max-height: min(90vh, 900px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-2);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.lead-modal::backdrop {
+  background: rgba(5, 6, 8, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.lead-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+.modal-body {
+  padding: clamp(28px, 5vw, 44px);
+  overflow-y: auto;
+}
+.modal-body > .eyebrow { margin-top: 0; }
+.modal-body h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin-bottom: 10px;
+}
+.modal-sub {
+  color: var(--text-dim);
+  margin-bottom: 28px;
+}
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.modal-close:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+/* Prevent background scroll while modal is open */
+body.modal-open { overflow: hidden; }
+
+/* Result / thank-you state */
+.lead-result {
+  text-align: center;
+  padding: 12px 0 4px;
+}
+.lead-result-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+.lead-result h3 {
+  font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+  margin-bottom: 12px;
+}
+.lead-result p {
+  color: var(--text-dim);
+  font-size: 1.05rem;
+  margin-bottom: 24px;
+}
+
 /* -------- Footer -------- */
 .site-footer {
   background: var(--bg-2);

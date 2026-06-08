@@ -170,9 +170,43 @@ if ('IntersectionObserver' in window && revealTargets.length) {
   revealTargets.forEach((el) => io.observe(el));
 }
 
-// Lead form -> WhatsApp
+// Lead form modal -> WhatsApp
 const WHATSAPP_NUMBER = '5511910458564';
+const leadModal = document.getElementById('lead-modal');
 const leadForm = document.getElementById('lead-form');
+
+// Open / close modal
+if (leadModal) {
+  const openModal = () => {
+    if (typeof leadModal.showModal === 'function') leadModal.showModal();
+    else leadModal.setAttribute('open', '');
+    document.body.classList.add('modal-open');
+  };
+  const closeModal = () => {
+    if (typeof leadModal.close === 'function') leadModal.close();
+    else leadModal.removeAttribute('open');
+    document.body.classList.remove('modal-open');
+  };
+
+  document.querySelectorAll('[data-open-modal]').forEach((trigger) => {
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      openModal();
+    });
+  });
+
+  leadModal.querySelectorAll('[data-close-modal]').forEach((btn) => {
+    btn.addEventListener('click', closeModal);
+  });
+
+  // Close on backdrop click and on native dialog close (Esc)
+  leadModal.addEventListener('click', (e) => {
+    if (e.target === leadModal) closeModal();
+  });
+  leadModal.addEventListener('close', () => {
+    document.body.classList.remove('modal-open');
+  });
+}
 
 if (leadForm) {
   const telInput = document.getElementById('lf-telefone');
@@ -180,6 +214,10 @@ if (leadForm) {
   const enderecoInput = document.getElementById('lf-endereco');
   const fatSelect = document.getElementById('lf-faturamento');
   const statusEl = document.getElementById('lf-status');
+  const resultEl = document.getElementById('lead-result');
+  const resultTitle = document.getElementById('lead-result-title');
+  const resultMsg = document.getElementById('lead-result-msg');
+  const resultWa = document.getElementById('lead-result-wa');
 
   // Phone mask: (11) 99999-9999
   telInput?.addEventListener('input', () => {
@@ -225,6 +263,7 @@ if (leadForm) {
     const data = new FormData(leadForm);
     const get = (k) => (data.get(k) || '').toString().trim();
     const qual = fatSelect?.selectedOptions[0]?.dataset.qual || '';
+    const isQualified = qual === 'qualificado';
 
     const lines = [
       'Olá! Quero saber mais sobre o Espaço Full Sales para um evento.',
@@ -242,7 +281,7 @@ if (leadForm) {
     if (cep) lines.push(`*CEP:* ${cep}`);
     if (endereco) lines.push(`*Endereço:* ${endereco}`);
 
-    // Tracking (GTM)
+    // Tracking (GTM) — backend integration will be plugged in here later
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'lead_form_submit',
@@ -253,8 +292,27 @@ if (leadForm) {
       eventos_presenciais: get('eventos'),
     });
 
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
-    if (statusEl) statusEl.textContent = 'Abrindo o WhatsApp com as suas respostas...';
-    window.open(url, '_blank', 'noopener');
+    // Swap form for the result message
+    leadForm.hidden = true;
+    if (resultEl) resultEl.hidden = false;
+
+    if (isQualified) {
+      if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
+      if (resultMsg) {
+        resultMsg.textContent =
+          'Se você é de São Paulo e quer agilizar seu atendimento, entre em contato pelo WhatsApp';
+      }
+      if (resultWa) {
+        resultWa.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
+        resultWa.hidden = false;
+      }
+    } else {
+      if (resultTitle) resultTitle.textContent = 'Obrigado!';
+      if (resultMsg) {
+        resultMsg.textContent =
+          'Em breve um dos nossos representantes entrará em contato para organizarmos o seu evento.';
+      }
+      if (resultWa) resultWa.hidden = true;
+    }
   });
 }

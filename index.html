@@ -44,7 +44,7 @@
           <li><a href="#tour">Tour</a></li>
           <li><a href="#por-que">Diferenciais</a></li>
           <li><a href="#localizacao">Localização</a></li>
-          <li><a href="#contato" class="nav-cta">Reservar</a></li>
+          <li><a href="#contato" class="nav-cta" data-open-modal>Reservar</a></li>
         </ul>
       </nav>
     </div>
@@ -67,7 +67,7 @@
           cerca de <strong>184 pessoas sentadas</strong>.
         </p>
         <div class="hero-actions">
-          <a href="#contato" class="btn btn-primary">Reservar o espaço</a>
+          <a href="#contato" class="btn btn-primary" data-open-modal>Reservar o espaço</a>
           <a href="#tour" class="btn btn-ghost">Conhecer o espaço</a>
         </div>
         <ul class="hero-meta">
@@ -381,8 +381,24 @@
         <p class="eyebrow">Reservas e visitas</p>
         <h2>Vamos planejar o seu próximo evento de conversão?</h2>
         <p class="cta-sub">
-          Preencha o formulário abaixo e nosso time entra em contato com a melhor
-          configuração do espaço para o seu evento.
+          Conte para a gente o segmento, o faturamento e o formato do evento —
+          montamos a melhor configuração do espaço para você.
+        </p>
+        <div class="cta-actions">
+          <button type="button" class="btn btn-primary btn-lg" data-open-modal>Reservar o espaço</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEAD FORM MODAL -->
+    <dialog class="lead-modal" id="lead-modal" aria-labelledby="lead-modal-title">
+      <button type="button" class="modal-close" data-close-modal aria-label="Fechar formulário">&times;</button>
+      <div class="modal-body">
+        <p class="eyebrow">Reservas e visitas</p>
+        <h2 id="lead-modal-title">Vamos planejar o seu evento?</h2>
+        <p class="modal-sub">
+          Responda algumas perguntas rápidas e o nosso time prepara o melhor
+          atendimento para você.
         </p>
 
         <form class="lead-form" id="lead-form" novalidate>
@@ -464,11 +480,18 @@
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg lead-form-submit">Enviar e falar no WhatsApp</button>
+          <button type="submit" class="btn btn-primary btn-lg lead-form-submit">Enviar</button>
           <p class="form-note" id="lf-status" role="status" aria-live="polite"></p>
         </form>
+
+        <div class="lead-result" id="lead-result" hidden>
+          <span class="lead-result-icon" aria-hidden="true">✓</span>
+          <h3 id="lead-result-title"></h3>
+          <p id="lead-result-msg"></p>
+          <a class="btn btn-primary btn-lg" id="lead-result-wa" target="_blank" rel="noopener" hidden>Falar no WhatsApp</a>
+        </div>
       </div>
-    </section>
+    </dialog>
   </main>
 
   <footer class="site-footer">
