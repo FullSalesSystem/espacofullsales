@@ -44,7 +44,7 @@
           <li><a href="#tour">Tour</a></li>
           <li><a href="#por-que">Diferenciais</a></li>
           <li><a href="#localizacao">Localização</a></li>
-          <li><a href="https://wa.me/5511910458564?text=Ol%C3%A1%21+Gostaria+de+saber+mais+sobre+o+Espa%C3%A7o+Full+Sales+para+um+evento." target="_blank" rel="noopener" class="nav-cta">Reservar</a></li>
+          <li><a href="#contato" class="nav-cta">Reservar</a></li>
         </ul>
       </nav>
     </div>
@@ -67,7 +67,7 @@
           cerca de <strong>184 pessoas sentadas</strong>.
         </p>
         <div class="hero-actions">
-          <a href="https://wa.me/5511910458564?text=Ol%C3%A1%21+Gostaria+de+saber+mais+sobre+o+Espa%C3%A7o+Full+Sales+para+um+evento." target="_blank" rel="noopener" class="btn btn-primary">Reservar o espaço</a>
+          <a href="#contato" class="btn btn-primary">Reservar o espaço</a>
           <a href="#tour" class="btn btn-ghost">Conhecer o espaço</a>
         </div>
         <ul class="hero-meta">
@@ -381,14 +381,92 @@
         <p class="eyebrow">Reservas e visitas</p>
         <h2>Vamos planejar o seu próximo evento de conversão?</h2>
         <p class="cta-sub">
-          Conte para a gente o formato, a data e o público — montamos a melhor
+          Preencha o formulário abaixo e nosso time entra em contato com a melhor
           configuração do espaço para o seu evento.
         </p>
-        <div class="cta-actions">
-          <a class="btn btn-primary btn-lg"
-             href="https://wa.me/5511910458564?text=Ol%C3%A1%21+Gostaria+de+saber+mais+sobre+o+Espa%C3%A7o+Full+Sales+para+um+evento."
-             target="_blank" rel="noopener">Falar no WhatsApp</a>
-        </div>
+
+        <form class="lead-form" id="lead-form" novalidate>
+          <div class="form-grid">
+            <div class="field">
+              <label for="lf-nome">Nome completo</label>
+              <input type="text" id="lf-nome" name="nome" autocomplete="name" placeholder="Seu nome" required />
+            </div>
+            <div class="field">
+              <label for="lf-email">E-mail</label>
+              <input type="email" id="lf-email" name="email" autocomplete="email" placeholder="voce@empresa.com" required />
+            </div>
+            <div class="field">
+              <label for="lf-telefone">Telefone / WhatsApp</label>
+              <input type="tel" id="lf-telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(11) 99999-9999" required />
+            </div>
+
+            <div class="field">
+              <label for="lf-segmento">Segmento</label>
+              <select id="lf-segmento" name="segmento" required>
+                <option value="" disabled selected>Selecione...</option>
+                <option>Serviço</option>
+                <option>Varejo</option>
+                <option>Mentoria</option>
+                <option>Indústria</option>
+                <option>E-commerce</option>
+                <option>Educação</option>
+                <option>Imobiliária</option>
+                <option>Finanças</option>
+                <option>Franquia/Franchising</option>
+                <option>Saúde</option>
+                <option>SAAS</option>
+                <option>Telecom</option>
+                <option>Turismo</option>
+                <option>Outro</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="lf-cargo">Cargo</label>
+              <select id="lf-cargo" name="cargo" required>
+                <option value="" disabled selected>Selecione...</option>
+                <option>Sócio/Empresário</option>
+                <option>Gerente/Líder</option>
+                <option>Colaborador/Funcionário</option>
+                <option>Prestador de serviço/Freelancer</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="lf-faturamento">Faturamento mensal</label>
+              <select id="lf-faturamento" name="faturamento" required>
+                <option value="" disabled selected>Selecione...</option>
+                <option data-qual="desqualificado">Abaixo de R$30 mil</option>
+                <option data-qual="semi-qualificado">Entre R$30 mil e R$50 mil</option>
+                <option data-qual="qualificado">Entre R$50 mil e R$100 mil</option>
+                <option data-qual="qualificado">Entre R$100 mil e R$300 mil</option>
+                <option data-qual="qualificado">Entre R$300 mil e R$500 mil</option>
+                <option data-qual="qualificado">Entre R$500 mil e R$1 milhão</option>
+                <option data-qual="qualificado">Acima de R$1 milhão</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset class="field field--full">
+            <legend>Você faz eventos presenciais?</legend>
+            <div class="radio-row">
+              <label class="radio"><input type="radio" name="eventos" value="Sim" required /><span>Sim</span></label>
+              <label class="radio"><input type="radio" name="eventos" value="Não" /><span>Não</span></label>
+            </div>
+          </fieldset>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="lf-cep">CEP</label>
+              <input type="text" id="lf-cep" name="cep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" />
+            </div>
+            <div class="field field--wide">
+              <label for="lf-endereco">Endereço</label>
+              <input type="text" id="lf-endereco" name="endereco" autocomplete="street-address" placeholder="Rua, bairro, cidade — preenchido pelo CEP" />
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg lead-form-submit">Enviar e falar no WhatsApp</button>
+          <p class="form-note" id="lf-status" role="status" aria-live="polite"></p>
+        </form>
       </div>
     </section>
   </main>

@@ -169,3 +169,92 @@ if ('IntersectionObserver' in window && revealTargets.length) {
 
   revealTargets.forEach((el) => io.observe(el));
 }
+
+// Lead form -> WhatsApp
+const WHATSAPP_NUMBER = '5511910458564';
+const leadForm = document.getElementById('lead-form');
+
+if (leadForm) {
+  const telInput = document.getElementById('lf-telefone');
+  const cepInput = document.getElementById('lf-cep');
+  const enderecoInput = document.getElementById('lf-endereco');
+  const fatSelect = document.getElementById('lf-faturamento');
+  const statusEl = document.getElementById('lf-status');
+
+  // Phone mask: (11) 99999-9999
+  telInput?.addEventListener('input', () => {
+    let v = telInput.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 6) v = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
+    else if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+    else if (v.length > 0) v = `(${v}`;
+    telInput.value = v;
+  });
+
+  // CEP mask: 00000-000
+  cepInput?.addEventListener('input', () => {
+    let v = cepInput.value.replace(/\D/g, '').slice(0, 8);
+    if (v.length > 5) v = `${v.slice(0, 5)}-${v.slice(5)}`;
+    cepInput.value = v;
+  });
+
+  // CEP lookup via ViaCEP (fills address if empty)
+  cepInput?.addEventListener('blur', async () => {
+    const cep = cepInput.value.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (!data.erro && enderecoInput && !enderecoInput.value.trim()) {
+        const parts = [data.logradouro, data.bairro, data.localidade && `${data.localidade}/${data.uf}`]
+          .filter(Boolean)
+          .join(', ');
+        enderecoInput.value = parts;
+      }
+    } catch (_) {
+      /* falha silenciosa — endereço continua editável manualmente */
+    }
+  });
+
+  leadForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!leadForm.checkValidity()) {
+      leadForm.reportValidity();
+      return;
+    }
+
+    const data = new FormData(leadForm);
+    const get = (k) => (data.get(k) || '').toString().trim();
+    const qual = fatSelect?.selectedOptions[0]?.dataset.qual || '';
+
+    const lines = [
+      'Olá! Quero saber mais sobre o Espaço Full Sales para um evento.',
+      '',
+      `*Nome:* ${get('nome')}`,
+      `*E-mail:* ${get('email')}`,
+      `*Telefone:* ${get('telefone')}`,
+      `*Segmento:* ${get('segmento')}`,
+      `*Cargo:* ${get('cargo')}`,
+      `*Faturamento:* ${get('faturamento')}`,
+      `*Faz eventos presenciais:* ${get('eventos')}`,
+    ];
+    const cep = get('cep');
+    const endereco = get('endereco');
+    if (cep) lines.push(`*CEP:* ${cep}`);
+    if (endereco) lines.push(`*Endereço:* ${endereco}`);
+
+    // Tracking (GTM)
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'lead_form_submit',
+      segmento: get('segmento'),
+      cargo: get('cargo'),
+      faturamento: get('faturamento'),
+      qualificacao: qual,
+      eventos_presenciais: get('eventos'),
+    });
+
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
+    if (statusEl) statusEl.textContent = 'Abrindo o WhatsApp com as suas respostas...';
+    window.open(url, '_blank', 'noopener');
+  });
+}
