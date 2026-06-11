@@ -422,43 +422,43 @@
               <label for="lf-segmento">Segmento</label>
               <select id="lf-segmento" name="segmento" required>
                 <option value="" disabled selected>Selecione...</option>
-                <option>Serviço</option>
-                <option>Varejo</option>
-                <option>Mentoria</option>
-                <option>Indústria</option>
-                <option>E-commerce</option>
-                <option>Educação</option>
-                <option>Imobiliária</option>
-                <option>Finanças</option>
-                <option>Franquia/Franchising</option>
-                <option>Saúde</option>
-                <option>SAAS</option>
-                <option>Telecom</option>
-                <option>Turismo</option>
-                <option>Outro</option>
+                <option value="servico">Serviço</option>
+                <option value="varejo">Varejo</option>
+                <option value="mentoria">Mentoria</option>
+                <option value="industria">Indústria</option>
+                <option value="ecommerce">E-commerce</option>
+                <option value="educacao">Educação</option>
+                <option value="imobiliaria">Imobiliária</option>
+                <option value="financas">Finanças</option>
+                <option value="franquia">Franquia/Franchising</option>
+                <option value="saude">Saúde</option>
+                <option value="saas">SAAS</option>
+                <option value="telecom">Telecom</option>
+                <option value="turismo">Turismo</option>
+                <option value="outro">Outro</option>
               </select>
             </div>
             <div class="field">
               <label for="lf-cargo">Cargo</label>
               <select id="lf-cargo" name="cargo" required>
                 <option value="" disabled selected>Selecione...</option>
-                <option>Sócio/Empresário</option>
-                <option>Gerente/Líder</option>
-                <option>Colaborador/Funcionário</option>
-                <option>Prestador de serviço/Freelancer</option>
+                <option value="socio-empresario">Sócio/Empresário</option>
+                <option value="gerente-lider">Gerente/Líder</option>
+                <option value="colaborador-funcionario">Colaborador/Funcionário</option>
+                <option value="prestador-freelancer">Prestador de serviço/Freelancer</option>
               </select>
             </div>
             <div class="field">
               <label for="lf-faturamento">Faturamento mensal</label>
               <select id="lf-faturamento" name="faturamento" required>
                 <option value="" disabled selected>Selecione...</option>
-                <option data-qual="desqualificado">Abaixo de R$30 mil</option>
-                <option data-qual="semi-qualificado">Entre R$30 mil e R$50 mil</option>
-                <option data-qual="qualificado">Entre R$50 mil e R$100 mil</option>
-                <option data-qual="qualificado">Entre R$100 mil e R$300 mil</option>
-                <option data-qual="qualificado">Entre R$300 mil e R$500 mil</option>
-                <option data-qual="qualificado">Entre R$500 mil e R$1 milhão</option>
-                <option data-qual="qualificado">Acima de R$1 milhão</option>
+                <option value="abaixo-30k" data-qual="desqualificado">Abaixo de R$30 mil</option>
+                <option value="30k-50k" data-qual="semi-qualificado">Entre R$30 mil e R$50 mil</option>
+                <option value="50k-100k" data-qual="qualificado">Entre R$50 mil e R$100 mil</option>
+                <option value="100k-300k" data-qual="qualificado">Entre R$100 mil e R$300 mil</option>
+                <option value="300k-500k" data-qual="qualificado">Entre R$300 mil e R$500 mil</option>
+                <option value="500k-1m" data-qual="qualificado">Entre R$500 mil e R$1 milhão</option>
+                <option value="acima-1m" data-qual="qualificado">Acima de R$1 milhão</option>
               </select>
             </div>
           </div>
@@ -466,8 +466,8 @@
           <fieldset class="field field--full">
             <legend>Você faz eventos presenciais?</legend>
             <div class="radio-row">
-              <label class="radio"><input type="radio" name="eventos" value="Sim" required /><span>Sim</span></label>
-              <label class="radio"><input type="radio" name="eventos" value="Não" /><span>Não</span></label>
+              <label class="radio"><input type="radio" name="eventos" value="sim" required /><span>Sim</span></label>
+              <label class="radio"><input type="radio" name="eventos" value="nao" /><span>Não</span></label>
             </div>
           </fieldset>
 
