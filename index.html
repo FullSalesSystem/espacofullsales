@@ -413,8 +413,7 @@
         <!-- STEP 1: SEGMENTO -->
         <section class="qz-step" data-step="1" aria-labelledby="qz-title-1">
           <p class="qz-eyebrow">Passo 1 de 4 · Segmento</p>
-          <h2 class="qz-title" id="qz-title-1">Qual o segmento da sua empresa?</h2>
-          <p class="qz-sub">Selecione a opção que melhor representa seu negócio.</p>
+          <h2 class="qz-title" id="qz-title-1">Segmento</h2>
           <div class="qz-options qz-options--grid" role="radiogroup" aria-labelledby="qz-title-1">
             <button type="button" class="qz-opt" data-field="segmento" data-value="servico">Serviço</button>
             <button type="button" class="qz-opt" data-field="segmento" data-value="varejo">Varejo</button>
@@ -436,37 +435,34 @@
         <!-- STEP 2: PERFIL / CARGO -->
         <section class="qz-step" data-step="2" hidden aria-labelledby="qz-title-2">
           <p class="qz-eyebrow">Passo 2 de 4 · Perfil</p>
-          <h2 class="qz-title" id="qz-title-2">Qual o seu cargo na empresa?</h2>
-          <p class="qz-sub">Isso ajuda a direcionar o atendimento certo pra você.</p>
+          <h2 class="qz-title" id="qz-title-2">Cargo</h2>
           <div class="qz-options qz-options--grid" role="radiogroup" aria-labelledby="qz-title-2">
             <button type="button" class="qz-opt" data-field="cargo" data-value="socio-empresario">Sócio/Empresário</button>
             <button type="button" class="qz-opt" data-field="cargo" data-value="gerente-lider">Gerente/Líder</button>
             <button type="button" class="qz-opt" data-field="cargo" data-value="colaborador-funcionario">Colaborador/Funcionário</button>
-            <button type="button" class="qz-opt" data-field="cargo" data-value="prestador-freelancer">Prestador/Freelancer</button>
+            <button type="button" class="qz-opt" data-field="cargo" data-value="prestador-freelancer">Prestador de serviço/Freelancer</button>
           </div>
         </section>
 
         <!-- STEP 3: RECEITA / FATURAMENTO -->
         <section class="qz-step" data-step="3" hidden aria-labelledby="qz-title-3">
           <p class="qz-eyebrow">Passo 3 de 4 · Receita</p>
-          <h2 class="qz-title" id="qz-title-3">Qual o faturamento mensal da empresa?</h2>
-          <p class="qz-sub">Escolha a faixa que mais se aproxima.</p>
+          <h2 class="qz-title" id="qz-title-3">Faturamento mensal</h2>
           <div class="qz-options qz-options--grid" role="radiogroup" aria-labelledby="qz-title-3">
-            <button type="button" class="qz-opt" data-field="faturamento" data-value="abaixo-30k" data-qual="desqualificado">Abaixo de R$ 30 mil</button>
-            <button type="button" class="qz-opt" data-field="faturamento" data-value="30k-50k" data-qual="semi-qualificado">R$ 30 mil a R$ 50 mil</button>
-            <button type="button" class="qz-opt" data-field="faturamento" data-value="50k-100k" data-qual="qualificado">R$ 50 mil a R$ 100 mil</button>
-            <button type="button" class="qz-opt" data-field="faturamento" data-value="100k-300k" data-qual="qualificado">R$ 100 mil a R$ 300 mil</button>
-            <button type="button" class="qz-opt" data-field="faturamento" data-value="300k-500k" data-qual="qualificado">R$ 300 mil a R$ 500 mil</button>
-            <button type="button" class="qz-opt" data-field="faturamento" data-value="500k-1m" data-qual="qualificado">R$ 500 mil a R$ 1 milhão</button>
-            <button type="button" class="qz-opt" data-field="faturamento" data-value="acima-1m" data-qual="qualificado">Acima de R$ 1 milhão</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="abaixo-30k" data-qual="desqualificado">Abaixo de R$30 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="30k-50k" data-qual="semi-qualificado">Entre R$30 mil e R$50 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="50k-100k" data-qual="qualificado">Entre R$50 mil e R$100 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="100k-300k" data-qual="qualificado">Entre R$100 mil e R$300 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="300k-500k" data-qual="qualificado">Entre R$300 mil e R$500 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="500k-1m" data-qual="qualificado">Entre R$500 mil e R$1 milhão</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="acima-1m" data-qual="qualificado">Acima de R$1 milhão</button>
           </div>
         </section>
 
         <!-- STEP 4: CONTATO -->
         <section class="qz-step" data-step="4" hidden aria-labelledby="qz-title-4">
           <p class="qz-eyebrow">Passo 4 de 4 · Contato</p>
-          <h2 class="qz-title" id="qz-title-4">Como entramos em contato?</h2>
-          <p class="qz-sub">Nosso time envia o convite e as opções de horário direto pra você.</p>
+          <h2 class="qz-title" id="qz-title-4">Contato</h2>
 
           <div class="qz-field">
             <label for="lf-nome">Nome completo</label>
@@ -491,7 +487,7 @@
 
           <div class="qz-nav">
             <button type="button" class="btn btn-ghost qz-back" data-qz-back>← Voltar</button>
-            <button type="submit" class="btn btn-primary qz-submit">CONTINUAR <span aria-hidden="true">→</span></button>
+            <button type="submit" class="btn btn-primary qz-submit">Enviar <span aria-hidden="true">→</span></button>
           </div>
           <p class="qz-status" id="lf-status" role="status" aria-live="polite"></p>
         </section>
