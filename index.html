@@ -390,108 +390,125 @@
       </div>
     </section>
 
-    <!-- LEAD FORM MODAL -->
+    <!-- LEAD FORM MODAL (step-by-step) -->
     <dialog class="lead-modal" id="lead-modal" aria-labelledby="lead-modal-title">
       <button type="button" class="modal-close" data-close-modal aria-label="Fechar formulário">&times;</button>
-      <div class="modal-body">
-        <div class="modal-intro" id="lead-intro">
-          <p class="eyebrow">Reservas e visitas</p>
-          <h2 id="lead-modal-title">Vamos planejar o seu evento?</h2>
-          <p class="modal-sub">
-            Responda algumas perguntas rápidas e o nosso time prepara o melhor
-            atendimento para você.
-          </p>
+
+      <!-- Barra de progresso com labels dos 4 steps -->
+      <div class="qz-progress" aria-hidden="true">
+        <div class="qz-progress-bar"><span class="qz-progress-fill" id="qz-fill"></span></div>
+        <ol class="qz-steps">
+          <li data-step="1"><span class="qz-num">1</span><span class="qz-name">Segmento</span></li>
+          <li data-step="2"><span class="qz-num">2</span><span class="qz-name">Perfil</span></li>
+          <li data-step="3"><span class="qz-num">3</span><span class="qz-name">Receita</span></li>
+          <li data-step="4"><span class="qz-num">4</span><span class="qz-name">Contato</span></li>
+        </ol>
+        <div class="qz-meta">
+          <span id="qz-counter">Passo 1 de 4</span>
+          <span id="qz-eta">~90 segundos</span>
         </div>
+      </div>
 
-        <form class="lead-form" id="lead-form" novalidate>
-          <div class="form-grid">
-            <div class="field">
-              <label for="lf-nome">Nome completo</label>
-              <input type="text" id="lf-nome" name="nome" autocomplete="name" placeholder="Seu nome" required />
-            </div>
-            <div class="field">
-              <label for="lf-email">E-mail</label>
-              <input type="email" id="lf-email" name="email" autocomplete="email" placeholder="voce@empresa.com" required />
-            </div>
-            <div class="field">
-              <label for="lf-telefone">Telefone / WhatsApp</label>
-              <input type="tel" id="lf-telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(11) 99999-9999" required />
-            </div>
+      <form class="qz-form" id="lead-form" novalidate>
+        <!-- STEP 1: SEGMENTO -->
+        <section class="qz-step" data-step="1" aria-labelledby="qz-title-1">
+          <p class="qz-eyebrow">Passo 1 de 4 · Segmento</p>
+          <h2 class="qz-title" id="qz-title-1">Qual o segmento da sua empresa?</h2>
+          <p class="qz-sub">Selecione a opção que melhor representa seu negócio.</p>
+          <div class="qz-options qz-options--grid" role="radiogroup" aria-labelledby="qz-title-1">
+            <button type="button" class="qz-opt" data-field="segmento" data-value="servico">Serviço</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="varejo">Varejo</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="mentoria">Mentoria</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="industria">Indústria</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="ecommerce">E-commerce</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="educacao">Educação</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="imobiliaria">Imobiliária</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="financas">Finanças</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="franquia">Franquia/Franchising</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="saude">Saúde</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="saas">SAAS</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="telecom">Telecom</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="turismo">Turismo</button>
+            <button type="button" class="qz-opt" data-field="segmento" data-value="outro">Outro</button>
+          </div>
+        </section>
 
-            <div class="field">
-              <label for="lf-segmento">Segmento</label>
-              <select id="lf-segmento" name="segmento" required>
-                <option value="" disabled selected>Selecione...</option>
-                <option value="servico">Serviço</option>
-                <option value="varejo">Varejo</option>
-                <option value="mentoria">Mentoria</option>
-                <option value="industria">Indústria</option>
-                <option value="ecommerce">E-commerce</option>
-                <option value="educacao">Educação</option>
-                <option value="imobiliaria">Imobiliária</option>
-                <option value="financas">Finanças</option>
-                <option value="franquia">Franquia/Franchising</option>
-                <option value="saude">Saúde</option>
-                <option value="saas">SAAS</option>
-                <option value="telecom">Telecom</option>
-                <option value="turismo">Turismo</option>
-                <option value="outro">Outro</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="lf-cargo">Cargo</label>
-              <select id="lf-cargo" name="cargo" required>
-                <option value="" disabled selected>Selecione...</option>
-                <option value="socio-empresario">Sócio/Empresário</option>
-                <option value="gerente-lider">Gerente/Líder</option>
-                <option value="colaborador-funcionario">Colaborador/Funcionário</option>
-                <option value="prestador-freelancer">Prestador de serviço/Freelancer</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="lf-faturamento">Faturamento mensal</label>
-              <select id="lf-faturamento" name="faturamento" required>
-                <option value="" disabled selected>Selecione...</option>
-                <option value="abaixo-30k" data-qual="desqualificado">Abaixo de R$30 mil</option>
-                <option value="30k-50k" data-qual="semi-qualificado">Entre R$30 mil e R$50 mil</option>
-                <option value="50k-100k" data-qual="qualificado">Entre R$50 mil e R$100 mil</option>
-                <option value="100k-300k" data-qual="qualificado">Entre R$100 mil e R$300 mil</option>
-                <option value="300k-500k" data-qual="qualificado">Entre R$300 mil e R$500 mil</option>
-                <option value="500k-1m" data-qual="qualificado">Entre R$500 mil e R$1 milhão</option>
-                <option value="acima-1m" data-qual="qualificado">Acima de R$1 milhão</option>
-              </select>
-            </div>
+        <!-- STEP 2: PERFIL / CARGO -->
+        <section class="qz-step" data-step="2" hidden aria-labelledby="qz-title-2">
+          <p class="qz-eyebrow">Passo 2 de 4 · Perfil</p>
+          <h2 class="qz-title" id="qz-title-2">Qual o seu cargo na empresa?</h2>
+          <p class="qz-sub">Isso ajuda a direcionar o atendimento certo pra você.</p>
+          <div class="qz-options qz-options--grid" role="radiogroup" aria-labelledby="qz-title-2">
+            <button type="button" class="qz-opt" data-field="cargo" data-value="socio-empresario">Sócio/Empresário</button>
+            <button type="button" class="qz-opt" data-field="cargo" data-value="gerente-lider">Gerente/Líder</button>
+            <button type="button" class="qz-opt" data-field="cargo" data-value="colaborador-funcionario">Colaborador/Funcionário</button>
+            <button type="button" class="qz-opt" data-field="cargo" data-value="prestador-freelancer">Prestador/Freelancer</button>
+          </div>
+        </section>
+
+        <!-- STEP 3: RECEITA / FATURAMENTO -->
+        <section class="qz-step" data-step="3" hidden aria-labelledby="qz-title-3">
+          <p class="qz-eyebrow">Passo 3 de 4 · Receita</p>
+          <h2 class="qz-title" id="qz-title-3">Qual o faturamento mensal da empresa?</h2>
+          <p class="qz-sub">Escolha a faixa que mais se aproxima.</p>
+          <div class="qz-options qz-options--grid" role="radiogroup" aria-labelledby="qz-title-3">
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="abaixo-30k" data-qual="desqualificado">Abaixo de R$ 30 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="30k-50k" data-qual="semi-qualificado">R$ 30 mil a R$ 50 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="50k-100k" data-qual="qualificado">R$ 50 mil a R$ 100 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="100k-300k" data-qual="qualificado">R$ 100 mil a R$ 300 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="300k-500k" data-qual="qualificado">R$ 300 mil a R$ 500 mil</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="500k-1m" data-qual="qualificado">R$ 500 mil a R$ 1 milhão</button>
+            <button type="button" class="qz-opt" data-field="faturamento" data-value="acima-1m" data-qual="qualificado">Acima de R$ 1 milhão</button>
+          </div>
+        </section>
+
+        <!-- STEP 4: CONTATO -->
+        <section class="qz-step" data-step="4" hidden aria-labelledby="qz-title-4">
+          <p class="qz-eyebrow">Passo 4 de 4 · Contato</p>
+          <h2 class="qz-title" id="qz-title-4">Como entramos em contato?</h2>
+          <p class="qz-sub">Nosso time envia o convite e as opções de horário direto pra você.</p>
+
+          <div class="qz-field">
+            <label for="lf-nome">Nome completo</label>
+            <input type="text" id="lf-nome" name="nome" autocomplete="name" placeholder="Seu nome" required />
+          </div>
+          <div class="qz-field">
+            <label for="lf-email">E-mail</label>
+            <input type="email" id="lf-email" name="email" autocomplete="email" placeholder="voce@empresa.com" required />
+          </div>
+          <div class="qz-field">
+            <label for="lf-telefone">Telefone / WhatsApp</label>
+            <input type="tel" id="lf-telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(11) 99999-9999" required />
           </div>
 
-          <fieldset class="field field--full">
+          <fieldset class="qz-field qz-field--radio">
             <legend>Você faz eventos presenciais?</legend>
-            <div class="radio-row">
-              <label class="radio"><input type="radio" name="eventos" value="sim" required /><span>Sim</span></label>
-              <label class="radio"><input type="radio" name="eventos" value="nao" /><span>Não</span></label>
+            <div class="qz-radio-row">
+              <button type="button" class="qz-opt qz-opt--inline" data-field="eventos" data-value="sim">Sim</button>
+              <button type="button" class="qz-opt qz-opt--inline" data-field="eventos" data-value="nao">Não</button>
             </div>
           </fieldset>
 
-          <div class="form-grid">
-            <div class="field">
-              <label for="lf-cep">CEP</label>
-              <input type="text" id="lf-cep" name="cep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" />
-            </div>
-            <div class="field field--wide">
-              <label for="lf-endereco">Endereço</label>
-              <input type="text" id="lf-endereco" name="endereco" autocomplete="street-address" placeholder="Rua, bairro, cidade — preenchido pelo CEP" />
-            </div>
+          <div class="qz-nav">
+            <button type="button" class="btn btn-ghost qz-back" data-qz-back>← Voltar</button>
+            <button type="submit" class="btn btn-primary qz-submit">CONTINUAR <span aria-hidden="true">→</span></button>
           </div>
+          <p class="qz-status" id="lf-status" role="status" aria-live="polite"></p>
+        </section>
 
-          <button type="submit" class="btn btn-primary btn-lg lead-form-submit">Enviar</button>
-          <p class="form-note" id="lf-status" role="status" aria-live="polite"></p>
-        </form>
-
-        <div class="lead-result" id="lead-result" hidden>
-          <span class="lead-result-icon" aria-hidden="true">✓</span>
-          <h3 id="lead-result-title"></h3>
-          <p id="lead-result-msg"></p>
-          <a class="btn btn-primary btn-lg" id="lead-result-wa" target="_blank" rel="noopener" hidden>Falar no WhatsApp</a>
+        <!-- Barra inferior com botão "voltar" pros steps 2-3 (step 1 sem voltar) -->
+        <div class="qz-back-bar" id="qz-back-bar" hidden>
+          <button type="button" class="btn btn-ghost qz-back" data-qz-back>← Voltar</button>
         </div>
+
+        <p class="qz-safe">🔒 Dados seguros · Criptografia SSL · Sem spam</p>
+      </form>
+
+      <div class="lead-result" id="lead-result" hidden>
+        <span class="lead-result-icon" aria-hidden="true">✓</span>
+        <h3 id="lead-result-title"></h3>
+        <p id="lead-result-msg"></p>
+        <a class="btn btn-primary btn-lg" id="lead-result-wa" target="_blank" rel="noopener" hidden>Falar no WhatsApp</a>
       </div>
     </dialog>
   </main>

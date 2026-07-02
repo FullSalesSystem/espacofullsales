@@ -1,9 +1,11 @@
 const WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 const ipBucket = new Map();
-const CLOSERS_PIPELINE_ID = 'mhe441mBoc0aQkVpwXXN';
-const PRE_SALES_PIPELINE_ID = 'jg6YojszvhB88pE7Uhmw';
-const PRE_SALES_STAGE_FUNIL_APLICACAO_ID = 'ccff0ad6-9ae8-4168-abed-8c83c948f61e';
+const EVENTOS_PIPELINE_ID = 'FsF7Yf61UwR8Gt3ZyOsx';
+const EVENTOS_STAGE_ENTRADA_ID = '81f2cde3-6fba-4f81-9d9a-64f82947f89f';
+const MARINA_USER_ID = 'wkhJfnKwiXgvvcjwKAE8';   // Marina Valois
+const RICARDO_USER_ID = 'Zy81V8eIFy85ooQzwRWl';  // Ricardo Patreze
+const MARINA_TARGET_SHARE = 0.6;                 // 60/40 rebalance
 const LEAD_SOURCE = 'FAP06 - Espaço de Eventos';
 const SUPABASE_TABLE = '[Leads] FAP06';
 
@@ -124,8 +126,6 @@ function validatePayload(input) {
     segmento: sanitizeText(input.segmento, 40),
     receita: sanitizeText(input.receita, 40),
     eventos: sanitizeText(input.eventos, 8).toLowerCase(),
-    cep: sanitizeText(input.cep, 12),
-    endereco: sanitizeText(input.endereco, 240),
     utm_source: sanitizeText(input.utm_source, 120),
     utm_medium: sanitizeText(input.utm_medium, 120),
     utm_campaign: sanitizeText(input.utm_campaign, 200),
@@ -143,9 +143,6 @@ function validatePayload(input) {
   if (!ALLOWED_SEGMENTOS.has(payload.segmento)) return null;
   if (!ALLOWED_RECEITAS.has(payload.receita)) return null;
   if (!ALLOWED_EVENTOS.has(payload.eventos)) return null;
-  /* cep/endereço são opcionais: se vierem, máximo de 12/240 chars já garantido
-     pelo sanitize. CEP precisa virar apenas dígitos com hífen opcional. */
-  if (payload.cep && !/^\d{5}-?\d{3}$/.test(payload.cep)) return null;
 
   return payload;
 }
@@ -295,17 +292,11 @@ function buildNoteBody(payload) {
     `• Cargo: ${CARGO_LABELS[payload.cargo] || payload.cargo}`,
     `• Receita mensal: ${RECEITA_LABELS[payload.receita] || payload.receita}`,
     `• Faz eventos presenciais: ${EVENTOS_LABELS[payload.eventos] || payload.eventos}`,
-  ];
-
-  if (payload.cep) lines.push(`• CEP: ${payload.cep}`);
-  if (payload.endereco) lines.push(`• Endereço: ${payload.endereco}`);
-
-  lines.push(
     '',
     `Classificação: ${classificacao}`,
     `Página: ${payload.page}`,
     `Enviado em: ${payload.submitted_at}`,
-  );
+  ];
 
   const utmEntries = [
     payload.utm_source && `source=${payload.utm_source}`,
@@ -380,7 +371,57 @@ async function updateContactSource(ghlBaseUrl, pitToken, contactId) {
   return response.ok;
 }
 
-async function createOpportunityInPreSales(ghlBaseUrl, pitToken, locationId, contactId, name) {
+/* Round-robin ponderado 60/40 entre Marina e Ricardo, baseado em
+   contagem de oportunidades ABERTAS já atribuídas a cada um dentro
+   da pipeline "10. Eventos". Fallback: se falhar, atribui a Marina. */
+async function chooseAssignee(ghlBaseUrl, pitToken, locationId) {
+  try {
+    const query = new URLSearchParams({
+      location_id: locationId,
+      pipeline_id: EVENTOS_PIPELINE_ID,
+      status: 'open',
+      limit: '100',
+    });
+    const endpoint = `${ghlBaseUrl.replace(/\/+$/, '')}/opportunities/search?${query.toString()}`;
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${pitToken}`,
+        Accept: 'application/json',
+        Version: '2021-07-28',
+      },
+    });
+    const data = await response.json().catch(() => null);
+    const opps = (data && Array.isArray(data.opportunities)) ? data.opportunities : [];
+
+    let marinaCount = 0;
+    let ricardoCount = 0;
+    for (const op of opps) {
+      const owner = op.assignedTo || op.ownerId || '';
+      if (owner === MARINA_USER_ID) marinaCount += 1;
+      else if (owner === RICARDO_USER_ID) ricardoCount += 1;
+    }
+    const total = marinaCount + ricardoCount;
+
+    /* Cota da Marina ao final desta atribuição: 60% de (total+1).
+       Se ela ainda está abaixo da cota, vai pra ela; senão, Ricardo.
+       Sequência que emerge: M M R M R M M R M R ... (6:4 a cada 10). */
+    const marinaTargetAfter = (total + 1) * MARINA_TARGET_SHARE;
+    const chosen = marinaCount < marinaTargetAfter ? MARINA_USER_ID : RICARDO_USER_ID;
+
+    console.log('[assignee] rebalance', {
+      marinaCount,
+      ricardoCount,
+      chosen: chosen === MARINA_USER_ID ? 'Marina' : 'Ricardo',
+    });
+    return chosen;
+  } catch (err) {
+    console.error('[assignee] search failed, defaulting to Marina', { message: err && err.message });
+    return MARINA_USER_ID;
+  }
+}
+
+async function createOpportunityInEventos(ghlBaseUrl, pitToken, locationId, contactId, name, assignedUserId) {
   const endpoint = `${ghlBaseUrl.replace(/\/+$/, '')}/opportunities/`;
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -393,33 +434,29 @@ async function createOpportunityInPreSales(ghlBaseUrl, pitToken, locationId, con
     body: JSON.stringify({
       locationId,
       contactId,
-      pipelineId: PRE_SALES_PIPELINE_ID,
-      pipelineStageId: PRE_SALES_STAGE_FUNIL_APLICACAO_ID,
+      pipelineId: EVENTOS_PIPELINE_ID,
+      pipelineStageId: EVENTOS_STAGE_ENTRADA_ID,
       status: 'open',
       name,
       source: LEAD_SOURCE,
+      assignedTo: assignedUserId,
     }),
   });
-  return response.ok;
-}
 
-async function moveOpportunityToPreSalesStage(ghlBaseUrl, pitToken, opportunityId) {
-  const endpoint = `${ghlBaseUrl.replace(/\/+$/, '')}/opportunities/${opportunityId}`;
-  const response = await fetch(endpoint, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${pitToken}`,
-      Accept: 'application/json',
-      Version: '2021-07-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      pipelineId: PRE_SALES_PIPELINE_ID,
-      pipelineStageId: PRE_SALES_STAGE_FUNIL_APLICACAO_ID,
-      source: LEAD_SOURCE,
-    }),
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    console.error('[ghl] create opp failed', {
+      status: response.status,
+      error: errorBody.slice(0, 500),
+    });
+    return null;
+  }
+  const data = await response.json().catch(() => null);
+  console.log('[ghl] opp created in Eventos', {
+    id: data && (data.opportunity?.id || data.id),
+    assignedTo: assignedUserId === MARINA_USER_ID ? 'Marina' : 'Ricardo',
   });
-  return response.ok;
+  return data;
 }
 
 async function handler(req, res) {
@@ -494,24 +531,32 @@ async function handler(req, res) {
       } catch (err) {
         console.error('[ghl] note threw', { message: err && err.message });
       }
+
+      /* Reentrada + criação de opp em "10. Eventos":
+         - Se contato já preencheu antes (tem opp em Eventos, aberta ou
+           fechada) → tag `reentrada-espacofs`.
+         - Se tem opp ABERTA em Eventos → NÃO cria nova (GHL rejeita
+           duplicata com 400 no mesmo pipeline). Time re-trabalha a existente.
+         - Se só opps FECHADAS ou nenhuma → cria opp nova em "Entrada"
+           com assignee balanceado 60% Marina / 40% Ricardo. */
       const opportunities = await searchContactOpportunities(ghlBaseUrl, pitToken, locationId, contactId);
-      const hasCloserOpportunity = opportunities.some((op) => op.pipelineId === CLOSERS_PIPELINE_ID);
+      const eventosOpps = opportunities.filter((op) => op.pipelineId === EVENTOS_PIPELINE_ID);
+      const hasOpenEventosOpp = eventosOpps.some((op) => op.status === 'open');
 
-      if (hasCloserOpportunity) {
-        await addContactTags(ghlBaseUrl, pitToken, contactId, ['reentrada-fap06']);
+      if (eventosOpps.length > 0) {
+        await addContactTags(ghlBaseUrl, pitToken, contactId, ['reentrada-espacofs']);
+      }
+
+      if (hasOpenEventosOpp) {
+        const existing = eventosOpps.find((op) => op.status === 'open');
+        console.log('[reentrada] opp aberta ja existe em Eventos, skip creation', {
+          existingId: existing && existing.id,
+        });
       } else {
-        const existingPreSalesOpp = opportunities.find((op) => op.pipelineId === PRE_SALES_PIPELINE_ID);
-
-        if (existingPreSalesOpp) {
-          if (
-            existingPreSalesOpp.pipelineStageId !== PRE_SALES_STAGE_FUNIL_APLICACAO_ID ||
-            existingPreSalesOpp.source !== LEAD_SOURCE
-          ) {
-            await moveOpportunityToPreSalesStage(ghlBaseUrl, pitToken, existingPreSalesOpp.id);
-          }
-        } else {
-          await createOpportunityInPreSales(ghlBaseUrl, pitToken, locationId, contactId, payload.nome);
-        }
+        const assignedUserId = await chooseAssignee(ghlBaseUrl, pitToken, locationId);
+        await createOpportunityInEventos(
+          ghlBaseUrl, pitToken, locationId, contactId, payload.nome, assignedUserId,
+        );
       }
     }
 

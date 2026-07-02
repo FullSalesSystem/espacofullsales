@@ -293,17 +293,86 @@ if (leadModal) {
 }
 
 if (leadForm) {
+  const TOTAL_STEPS = 4;
   const telInput = document.getElementById('lf-telefone');
-  const cepInput = document.getElementById('lf-cep');
-  const enderecoInput = document.getElementById('lf-endereco');
-  const fatSelect = document.getElementById('lf-faturamento');
   const statusEl = document.getElementById('lf-status');
   const resultEl = document.getElementById('lead-result');
   const resultTitle = document.getElementById('lead-result-title');
   const resultMsg = document.getElementById('lead-result-msg');
   const resultWa = document.getElementById('lead-result-wa');
+  const fillEl = document.getElementById('qz-fill');
+  const counterEl = document.getElementById('qz-counter');
+  const backBar = document.getElementById('qz-back-bar');
+  const stepEls = Array.from(leadForm.querySelectorAll('.qz-step'));
+  const progressItems = document.querySelectorAll('.qz-steps li');
 
-  // Phone mask: (11) 99999-9999
+  // Respostas coletadas pelos botões-radio dos steps 1-3 + eventos do step 4
+  const answers = { segmento: '', cargo: '', faturamento: '', eventos: '', qual: '' };
+  let currentStep = 1;
+
+  function showStep(n) {
+    currentStep = n;
+    stepEls.forEach((el) => {
+      const isActive = Number(el.dataset.step) === n;
+      el.hidden = !isActive;
+    });
+    const pct = Math.round((n / TOTAL_STEPS) * 100);
+    if (fillEl) fillEl.style.width = pct + '%';
+    if (counterEl) counterEl.textContent = `Passo ${n} de ${TOTAL_STEPS}`;
+    progressItems.forEach((li) => {
+      const s = Number(li.dataset.step);
+      li.classList.toggle('is-active', s === n);
+      li.classList.toggle('is-done', s < n);
+    });
+    // Voltar aparece nos steps 2 e 3 (step 1 sem back, step 4 tem back próprio)
+    if (backBar) backBar.hidden = !(n === 2 || n === 3);
+  }
+
+  function selectOption(field, value, qual) {
+    answers[field] = value;
+    if (field === 'faturamento') answers.qual = qual || '';
+    leadForm.querySelectorAll(`.qz-opt[data-field="${field}"]`).forEach((btn) => {
+      btn.classList.toggle('is-selected', btn.dataset.value === value);
+    });
+  }
+
+  function trackStep(field, value, qual) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'lead_step_answer',
+      step: currentStep,
+      field,
+      value,
+      qualificacao: field === 'faturamento' ? (qual || '') : undefined,
+    });
+  }
+
+  // Auto-avanço nas 3 primeiras etapas ao clicar. No step 4, o clique em Sim/Não
+  // só marca a resposta — o submit final é pelo botão CONTINUAR.
+  leadForm.addEventListener('click', (e) => {
+    const back = e.target.closest('[data-qz-back]');
+    if (back) {
+      e.preventDefault();
+      if (currentStep > 1) showStep(currentStep - 1);
+      return;
+    }
+    const btn = e.target.closest('.qz-opt');
+    if (!btn) return;
+    const field = btn.dataset.field;
+    const value = btn.dataset.value;
+    const qual = btn.dataset.qual;
+    if (!field || !value) return;
+
+    selectOption(field, value, qual);
+    trackStep(field, value, qual);
+
+    if (field === 'segmento' || field === 'cargo' || field === 'faturamento') {
+      const nextIdx = Math.min(currentStep + 1, TOTAL_STEPS);
+      setTimeout(() => showStep(nextIdx), 240);
+    }
+  });
+
+  // Máscara telefone: (11) 99999-9999
   telInput?.addEventListener('input', () => {
     let v = telInput.value.replace(/\D/g, '').slice(0, 11);
     if (v.length > 6) v = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
@@ -312,101 +381,83 @@ if (leadForm) {
     telInput.value = v;
   });
 
-  // CEP mask: 00000-000
-  cepInput?.addEventListener('input', () => {
-    let v = cepInput.value.replace(/\D/g, '').slice(0, 8);
-    if (v.length > 5) v = `${v.slice(0, 5)}-${v.slice(5)}`;
-    cepInput.value = v;
-  });
-
-  // CEP lookup via ViaCEP (fills address if empty)
-  cepInput?.addEventListener('blur', async () => {
-    const cep = cepInput.value.replace(/\D/g, '');
-    if (cep.length !== 8) return;
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
-      if (!data.erro && enderecoInput && !enderecoInput.value.trim()) {
-        const parts = [data.logradouro, data.bairro, data.localidade && `${data.localidade}/${data.uf}`]
-          .filter(Boolean)
-          .join(', ');
-        enderecoInput.value = parts;
-      }
-    } catch (_) {
-      /* falha silenciosa — endereço continua editável manualmente */
-    }
-  });
+  function flashStatus(msg) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.classList.add('is-error');
+    setTimeout(() => statusEl.classList.remove('is-error'), 2000);
+  }
 
   leadForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!leadForm.checkValidity()) {
-      leadForm.reportValidity();
-      return;
-    }
 
-    const data = new FormData(leadForm);
-    const get = (k) => (data.get(k) || '').toString().trim();
-    const qual = fatSelect?.selectedOptions[0]?.dataset.qual || '';
-    const isQualified = qual === 'qualificado';
+    const nome = document.getElementById('lf-nome').value.trim();
+    const email = document.getElementById('lf-email').value.trim().toLowerCase();
+    const telefone = document.getElementById('lf-telefone').value.trim();
 
-    const lines = [
+    // Sanity nos steps anteriores
+    if (!answers.segmento) { showStep(1); return flashStatus('Selecione o segmento.'); }
+    if (!answers.cargo) { showStep(2); return flashStatus('Selecione o cargo.'); }
+    if (!answers.faturamento) { showStep(3); return flashStatus('Selecione o faturamento.'); }
+
+    // Validação do step 4
+    if (nome.length < 2) return flashStatus('Preencha o seu nome.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return flashStatus('E-mail inválido.');
+    if (telefone.replace(/\D/g, '').length < 10) return flashStatus('Telefone inválido.');
+    if (!answers.eventos) return flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".');
+
+    const isQualified = answers.qual === 'qualificado';
+
+    const waLines = [
       'Olá! Quero saber mais sobre o Espaço Full Sales para um evento.',
       '',
-      `*Nome:* ${get('nome')}`,
-      `*E-mail:* ${get('email')}`,
-      `*Telefone:* ${get('telefone')}`,
-      `*Segmento:* ${label('segmento', get('segmento'))}`,
-      `*Cargo:* ${label('cargo', get('cargo'))}`,
-      `*Faturamento:* ${label('faturamento', get('faturamento'))}`,
-      `*Faz eventos presenciais:* ${label('eventos', get('eventos'))}`,
+      `*Nome:* ${nome}`,
+      `*E-mail:* ${email}`,
+      `*Telefone:* ${telefone}`,
+      `*Segmento:* ${label('segmento', answers.segmento)}`,
+      `*Cargo:* ${label('cargo', answers.cargo)}`,
+      `*Faturamento:* ${label('faturamento', answers.faturamento)}`,
+      `*Faz eventos presenciais:* ${label('eventos', answers.eventos)}`,
     ];
-    const cep = get('cep');
-    const endereco = get('endereco');
-    if (cep) lines.push(`*CEP:* ${cep}`);
-    if (endereco) lines.push(`*Endereço:* ${endereco}`);
 
-    // Tracking (GTM)
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'lead_form_submit',
-      segmento: get('segmento'),
-      cargo: get('cargo'),
-      faturamento: get('faturamento'),
-      qualificacao: qual,
-      eventos_presenciais: get('eventos'),
+      segmento: answers.segmento,
+      cargo: answers.cargo,
+      faturamento: answers.faturamento,
+      qualificacao: answers.qual,
+      eventos_presenciais: answers.eventos,
     });
 
-    // Backend — Supabase [Leads] FAP06 + GHL (upsert/note/opportunity)
+    // Backend — Supabase [Leads] FAP06 + GHL (10.Eventos, Marina/Ricardo 60/40)
     postLeadToApi({
       submission_id: generateSubmissionId(),
       submitted_at: new Date().toISOString(),
       page: location.href,
-      nome: get('nome'),
-      email: get('email').toLowerCase(),
-      whatsapp: formatWhatsappE164BR(get('telefone')),
-      cargo: get('cargo'),
-      segmento: get('segmento'),
-      receita: get('faturamento'),
-      eventos: get('eventos'),
-      cep: get('cep'),
-      endereco: get('endereco'),
+      nome,
+      email,
+      whatsapp: formatWhatsappE164BR(telefone),
+      cargo: answers.cargo,
+      segmento: answers.segmento,
+      receita: answers.faturamento,
+      eventos: answers.eventos,
       ...getStoredUtms(),
     });
 
-    // Swap form (and intro) for the result message
+    // Substitui o form pela tela de sucesso
     leadForm.hidden = true;
-    const introEl = document.getElementById('lead-intro');
-    if (introEl) introEl.hidden = true;
+    if (backBar) backBar.hidden = true;
     if (resultEl) resultEl.hidden = false;
 
     if (isQualified) {
       if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
       if (resultMsg) {
         resultMsg.textContent =
-          'Se você quer agilizar o seu atendimento, entre em contato pelo WhatsApp';
+          'Se você quer agilizar o seu atendimento, entre em contato pelo WhatsApp.';
       }
       if (resultWa) {
-        resultWa.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
+        resultWa.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waLines.join('\n'))}`;
         resultWa.hidden = false;
       }
     } else {
@@ -418,4 +469,7 @@ if (leadForm) {
       if (resultWa) resultWa.hidden = true;
     }
   });
+
+  // Inicializa no step 1
+  showStep(1);
 }

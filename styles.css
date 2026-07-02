@@ -797,6 +797,279 @@ body.modal-open { overflow: hidden; }
   margin-bottom: 24px;
 }
 
+/* -------- Modal step-by-step (playbook-like) -------- */
+.lead-modal {
+  padding: 0;
+  position: relative;
+}
+.lead-modal .modal-close {
+  z-index: 10;
+}
+
+/* Barra de progresso do topo */
+.qz-progress {
+  padding: 34px clamp(24px, 4vw, 40px) 12px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 61, 87, 0.04), transparent);
+}
+.qz-progress-bar {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.qz-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent), #ff7a91);
+  border-radius: 999px;
+  transition: width .35s ease;
+}
+.qz-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: .85rem;
+  font-weight: 600;
+}
+.qz-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: .55;
+  transition: opacity .25s ease, color .25s ease;
+}
+.qz-steps li.is-active { opacity: 1; color: var(--text); }
+.qz-steps li.is-done { opacity: .85; color: var(--text); }
+.qz-num {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: .78rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.03);
+}
+.qz-steps li.is-active .qz-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 61, 87, 0.15);
+}
+.qz-steps li.is-done .qz-num {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.qz-name { white-space: nowrap; }
+@media (max-width: 520px) {
+  .qz-name { display: none; }
+  .qz-steps { grid-template-columns: repeat(4, auto); justify-content: space-between; }
+}
+.qz-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: .78rem;
+  color: var(--text-mute);
+}
+
+/* Corpo do quiz */
+.qz-form {
+  padding: 22px clamp(24px, 4vw, 40px) 24px;
+  margin: 0;
+}
+.qz-step { display: block; }
+.qz-step[hidden] { display: none; }
+
+.qz-eyebrow {
+  display: inline-block;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 5px 10px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+.qz-title {
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  line-height: 1.25;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.qz-sub {
+  color: var(--text-dim);
+  font-size: .95rem;
+  margin: 0 0 22px;
+}
+
+/* Opções em grid (radio-look) */
+.qz-options--grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (max-width: 480px) {
+  .qz-options--grid { grid-template-columns: 1fr; }
+}
+.qz-opt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 14px 16px 14px 42px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  font-family: inherit;
+  font-size: .95rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, transform .1s ease;
+}
+.qz-opt::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: transparent;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.qz-opt:hover {
+  border-color: rgba(255, 61, 87, 0.55);
+  background: rgba(255, 61, 87, 0.05);
+}
+.qz-opt.is-selected {
+  border-color: var(--accent);
+  background: rgba(255, 61, 87, 0.08);
+}
+.qz-opt.is-selected::before {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: inset 0 0 0 3px var(--bg-2);
+}
+.qz-opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.qz-opt--inline {
+  min-height: 46px;
+  padding-left: 38px;
+  flex: 1;
+}
+
+/* Step 4 - Campos de contato */
+.qz-field {
+  margin-bottom: 14px;
+}
+.qz-field label,
+.qz-field legend {
+  display: block;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  padding: 0;
+}
+.qz-field input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: border-color .2s ease;
+}
+.qz-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 61, 87, 0.18);
+}
+.qz-field--radio { border: 0; padding: 0; margin: 8px 0 18px; }
+.qz-radio-row {
+  display: flex;
+  gap: 10px;
+}
+
+/* Nav: voltar + CTA */
+.qz-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+.qz-submit {
+  min-height: 52px;
+  padding: 14px 22px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  margin-left: auto;
+}
+.qz-back {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.qz-back:hover {
+  color: var(--text);
+  border-color: rgba(255, 61, 87, 0.4);
+}
+.qz-back-bar {
+  margin-top: 18px;
+}
+
+/* Status / erros */
+.qz-status {
+  min-height: 20px;
+  margin-top: 10px;
+  font-size: .88rem;
+  color: transparent;
+  transition: color .2s ease;
+}
+.qz-status.is-error {
+  color: #ff8a8a;
+}
+
+/* Selo de segurança no rodapé */
+.qz-safe {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--text-mute);
+  font-size: .82rem;
+  text-align: center;
+}
+
 /* -------- Footer -------- */
 .site-footer {
   background: var(--bg-2);
