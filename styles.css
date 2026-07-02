@@ -801,14 +801,21 @@ body.modal-open { overflow: hidden; }
 .lead-modal {
   padding: 0;
   position: relative;
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(88vh, 720px);
 }
 .lead-modal .modal-close {
   z-index: 10;
+  top: 10px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  font-size: 1.4rem;
 }
 
-/* Barra de progresso do topo */
+/* Barra de progresso do topo (compacta) */
 .qz-progress {
-  padding: 34px clamp(24px, 4vw, 40px) 12px;
+  padding: 18px clamp(18px, 3vw, 28px) 10px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(255, 61, 87, 0.04), transparent);
 }
@@ -817,7 +824,7 @@ body.modal-open { overflow: hidden; }
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .qz-progress-fill {
   display: block;
@@ -833,15 +840,15 @@ body.modal-open { overflow: hidden; }
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 6px;
   color: var(--text-dim);
-  font-size: .85rem;
+  font-size: .78rem;
   font-weight: 600;
 }
 .qz-steps li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   opacity: .55;
   transition: opacity .25s ease, color .25s ease;
 }
@@ -850,11 +857,11 @@ body.modal-open { overflow: hidden; }
 .qz-num {
   display: grid;
   place-items: center;
-  min-width: 22px;
-  height: 22px;
+  min-width: 20px;
+  height: 20px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  font-size: .78rem;
+  font-size: .72rem;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.03);
 }
@@ -862,7 +869,7 @@ body.modal-open { overflow: hidden; }
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
-  box-shadow: 0 0 0 4px rgba(255, 61, 87, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 61, 87, 0.15);
 }
 .qz-steps li.is-done .qz-num {
   background: transparent;
@@ -877,78 +884,78 @@ body.modal-open { overflow: hidden; }
 .qz-meta {
   display: flex;
   justify-content: space-between;
-  margin-top: 10px;
-  font-size: .78rem;
+  margin-top: 8px;
+  font-size: .72rem;
   color: var(--text-mute);
 }
 
 /* Corpo do quiz */
 .qz-form {
-  padding: 22px clamp(24px, 4vw, 40px) 24px;
+  padding: 14px clamp(18px, 3vw, 28px) 18px;
   margin: 0;
+  overflow-y: auto;
+  max-height: calc(min(88vh, 720px) - 130px);
 }
 .qz-step { display: block; }
 .qz-step[hidden] { display: none; }
 
 .qz-eyebrow {
   display: inline-block;
-  font-size: .72rem;
+  font-size: .66rem;
   font-weight: 800;
   letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--accent);
   background: var(--accent-soft);
-  padding: 5px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 .qz-title {
-  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
   line-height: 1.25;
-  margin: 0 0 8px;
+  margin: 0 0 14px;
   color: var(--text);
 }
-.qz-sub {
-  color: var(--text-dim);
-  font-size: .95rem;
-  margin: 0 0 22px;
-}
 
-/* Opções em grid (radio-look) */
+/* Opções em grid (radio-look). Mobile: 1 col. Tablet: 2 col. Desktop: 3 col. */
 .qz-options--grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
-@media (max-width: 480px) {
-  .qz-options--grid { grid-template-columns: 1fr; }
+@media (min-width: 480px) {
+  .qz-options--grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 720px) {
+  .qz-options--grid { grid-template-columns: repeat(3, 1fr); }
 }
 .qz-opt {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 54px;
-  padding: 14px 16px 14px 42px;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 12px 8px 34px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.02);
   color: var(--text);
   font-family: inherit;
-  font-size: .95rem;
+  font-size: .88rem;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: border-color .2s ease, background .2s ease, transform .1s ease;
+  transition: border-color .2s ease, background .2s ease;
 }
 .qz-opt::before {
   content: "";
   position: absolute;
-  left: 14px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 2px solid var(--line);
   background: transparent;
@@ -973,33 +980,33 @@ body.modal-open { overflow: hidden; }
 }
 
 .qz-opt--inline {
-  min-height: 46px;
-  padding-left: 38px;
+  min-height: 40px;
+  padding-left: 30px;
   flex: 1;
 }
 
 /* Step 4 - Campos de contato */
 .qz-field {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .qz-field label,
 .qz-field legend {
   display: block;
-  font-size: .82rem;
+  font-size: .78rem;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   padding: 0;
 }
 .qz-field input {
   width: 100%;
   font-family: inherit;
-  font-size: 1rem;
+  font-size: .95rem;
   color: var(--text);
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
+  border-radius: 8px;
+  padding: 9px 12px;
   transition: border-color .2s ease;
 }
 .qz-field input:focus {
@@ -1007,10 +1014,10 @@ body.modal-open { overflow: hidden; }
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(255, 61, 87, 0.18);
 }
-.qz-field--radio { border: 0; padding: 0; margin: 8px 0 18px; }
+.qz-field--radio { border: 0; padding: 0; margin: 6px 0 12px; }
 .qz-radio-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* Nav: voltar + CTA */
@@ -1018,13 +1025,13 @@ body.modal-open { overflow: hidden; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 14px;
 }
 .qz-submit {
-  min-height: 52px;
-  padding: 14px 22px;
-  font-size: 1rem;
+  min-height: 42px;
+  padding: 10px 20px;
+  font-size: .9rem;
   font-weight: 800;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -1035,9 +1042,10 @@ body.modal-open { overflow: hidden; }
   background: transparent;
   color: var(--text-dim);
   border: 1px solid var(--line);
-  padding: 10px 16px;
+  padding: 7px 14px;
   border-radius: 999px;
   font-weight: 600;
+  font-size: .85rem;
   cursor: pointer;
 }
 .qz-back:hover {
@@ -1045,14 +1053,14 @@ body.modal-open { overflow: hidden; }
   border-color: rgba(255, 61, 87, 0.4);
 }
 .qz-back-bar {
-  margin-top: 18px;
+  margin-top: 12px;
 }
 
 /* Status / erros */
 .qz-status {
-  min-height: 20px;
-  margin-top: 10px;
-  font-size: .88rem;
+  min-height: 18px;
+  margin-top: 8px;
+  font-size: .82rem;
   color: transparent;
   transition: color .2s ease;
 }
@@ -1062,11 +1070,11 @@ body.modal-open { overflow: hidden; }
 
 /* Selo de segurança no rodapé */
 .qz-safe {
-  margin: 20px 0 0;
-  padding-top: 16px;
+  margin: 14px 0 0;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
   color: var(--text-mute);
-  font-size: .82rem;
+  font-size: .72rem;
   text-align: center;
 }
 
