@@ -13,6 +13,7 @@ const ALLOWED_CARGOS = new Set([
   'dono-evento',
   'agencia',
   'assessoria',
+  'outro',
 ]);
 
 const ALLOWED_EVENTOS = new Set(['sim', 'nao']);
@@ -21,6 +22,7 @@ const CARGO_LABELS = {
   'dono-evento': 'Dono(a) do evento',
   agencia: 'Agência',
   assessoria: 'Assessor(a) de eventos',
+  outro: 'Outro',
 };
 
 const EVENTOS_LABELS = {
