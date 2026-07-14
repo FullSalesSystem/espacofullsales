@@ -199,37 +199,6 @@ function generateSubmissionId() {
   return 'fap6-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
 }
 
-// Labels legíveis pros slugs usados nos <option value="">
-const SLUG_LABELS = {
-  segmento: {
-    servico: 'Serviço', varejo: 'Varejo', mentoria: 'Mentoria',
-    industria: 'Indústria', ecommerce: 'E-commerce', educacao: 'Educação',
-    imobiliaria: 'Imobiliária', financas: 'Finanças',
-    franquia: 'Franquia/Franchising', saude: 'Saúde', saas: 'SAAS',
-    telecom: 'Telecom', turismo: 'Turismo', outro: 'Outro',
-  },
-  cargo: {
-    'socio-empresario': 'Sócio/Empresário',
-    'gerente-lider': 'Gerente/Líder',
-    'colaborador-funcionario': 'Colaborador/Funcionário',
-    'prestador-freelancer': 'Prestador de serviço/Freelancer',
-  },
-  faturamento: {
-    'abaixo-30k': 'Abaixo de R$30 mil',
-    '30k-50k': 'Entre R$30 mil e R$50 mil',
-    '50k-100k': 'Entre R$50 mil e R$100 mil',
-    '100k-300k': 'Entre R$100 mil e R$300 mil',
-    '300k-500k': 'Entre R$300 mil e R$500 mil',
-    '500k-1m': 'Entre R$500 mil e R$1 milhão',
-    'acima-1m': 'Acima de R$1 milhão',
-  },
-  eventos: { sim: 'Sim', nao: 'Não' },
-};
-
-function label(field, slug) {
-  return (SLUG_LABELS[field] && SLUG_LABELS[field][slug]) || slug || '';
-}
-
 function formatWhatsappE164BR(telefoneBruto) {
   /* Form usa máscara "(11) 99999-9999"; back valida `^\+\d{1,3}\s\d{8,15}$`.
      Assume BR: prefixa "+55 " e manda só dígitos. */
@@ -326,6 +295,11 @@ if (leadForm) {
     });
     // Voltar aparece nos steps 2 e 3 (step 1 sem back, step 4 tem back próprio)
     if (backBar) backBar.hidden = !(n === 2 || n === 3);
+
+    // No desktop, já deixa o cursor pronto no primeiro campo do contato
+    if (n === 4 && window.matchMedia('(pointer: fine)').matches) {
+      setTimeout(() => document.getElementById('lf-nome')?.focus({ preventScroll: true }), 200);
+    }
   }
 
   function selectOption(field, value, qual) {
@@ -381,11 +355,19 @@ if (leadForm) {
     telInput.value = v;
   });
 
-  function flashStatus(msg) {
+  function flashStatus(msg, fieldEl) {
     if (!statusEl) return;
     statusEl.textContent = msg;
     statusEl.classList.add('is-error');
-    setTimeout(() => statusEl.classList.remove('is-error'), 2000);
+    clearTimeout(flashStatus.timer);
+    flashStatus.timer = setTimeout(() => statusEl.classList.remove('is-error'), 4000);
+    if (fieldEl) {
+      fieldEl.classList.add('is-invalid');
+      const clear = () => fieldEl.classList.remove('is-invalid');
+      fieldEl.addEventListener('input', clear, { once: true });
+      fieldEl.addEventListener('click', clear, { once: true });
+      if (typeof fieldEl.focus === 'function' && fieldEl.tagName === 'INPUT') fieldEl.focus();
+    }
   }
 
   leadForm.addEventListener('submit', (e) => {
@@ -401,23 +383,17 @@ if (leadForm) {
     if (!answers.faturamento) { showStep(3); return flashStatus('Selecione o faturamento.'); }
 
     // Validação do step 4
-    if (nome.length < 2) return flashStatus('Preencha o seu nome.');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return flashStatus('E-mail inválido.');
-    if (telefone.replace(/\D/g, '').length < 10) return flashStatus('Telefone inválido.');
-    if (!answers.eventos) return flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".');
+    if (nome.length < 2) return flashStatus('Preencha o seu nome.', document.getElementById('lf-nome'));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return flashStatus('E-mail inválido.', document.getElementById('lf-email'));
+    if (telefone.replace(/\D/g, '').length < 10) return flashStatus('Telefone inválido.', telInput);
+    if (!answers.eventos) return flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".', leadForm.querySelector('.qz-radio-row'));
 
     const isQualified = answers.qual === 'qualificado';
 
+    // Mensagem pré-preenchida que O LEAD envia — ele só ajusta datas e nº de pessoas
     const waLines = [
-      'Olá! Quero saber mais sobre o Espaço Full Sales para um evento.',
-      '',
-      `*Nome:* ${nome}`,
-      `*E-mail:* ${email}`,
-      `*Telefone:* ${telefone}`,
-      `*Segmento:* ${label('segmento', answers.segmento)}`,
-      `*Cargo:* ${label('cargo', answers.cargo)}`,
-      `*Faturamento:* ${label('faturamento', answers.faturamento)}`,
-      `*Faz eventos presenciais:* ${label('eventos', answers.eventos)}`,
+      'Olá! 🙂',
+      'Gostaria de cotar as datas de xx/xx a yy/yy (ou sem datas) para um evento de (...) pessoas.',
     ];
 
     window.dataLayer = window.dataLayer || [];
@@ -454,7 +430,7 @@ if (leadForm) {
       if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
       if (resultMsg) {
         resultMsg.textContent =
-          'Se você quer agilizar o seu atendimento, entre em contato pelo WhatsApp.';
+          'Quer agilizar o atendimento? Chama a equipe no WhatsApp: a mensagem já vai pronta, é só ajustar as datas e o tamanho do seu evento.';
       }
       if (resultWa) {
         resultWa.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waLines.join('\n'))}`;
