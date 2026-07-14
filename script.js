@@ -142,12 +142,12 @@ function initCarousel(carousel) {
 
 document.querySelectorAll('[data-carousel]').forEach(initCarousel);
 
-// Subtle reveal-on-scroll for sections
+// Subtle reveal-on-scroll for sections (pulado com prefers-reduced-motion)
 const revealTargets = document.querySelectorAll(
   '.section-head, .tour-item, .reason-card, .hero-meta li, .map-wrap, .cta-inner'
 );
 
-if ('IntersectionObserver' in window && revealTargets.length) {
+if (!PREFERS_REDUCED && 'IntersectionObserver' in window && revealTargets.length) {
   revealTargets.forEach((el) => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(16px)';
@@ -168,6 +168,21 @@ if ('IntersectionObserver' in window && revealTargets.length) {
   );
 
   revealTargets.forEach((el) => io.observe(el));
+}
+
+// Sticky CTA mobile: aparece quando o hero sai da tela
+const stickyCta = document.getElementById('sticky-cta');
+const heroEl = document.querySelector('.hero');
+if (stickyCta && heroEl && 'IntersectionObserver' in window) {
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        stickyCta.classList.toggle('is-visible', !entry.isIntersecting);
+      });
+    },
+    { threshold: 0.05 }
+  );
+  io.observe(heroEl);
 }
 
 // UTMPicker — captura UTMs da URL no load e persiste em sessionStorage
