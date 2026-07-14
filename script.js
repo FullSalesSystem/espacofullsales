@@ -199,37 +199,6 @@ function generateSubmissionId() {
   return 'fap6-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
 }
 
-// Labels legíveis pros slugs usados nos <option value="">
-const SLUG_LABELS = {
-  segmento: {
-    servico: 'Serviço', varejo: 'Varejo', mentoria: 'Mentoria',
-    industria: 'Indústria', ecommerce: 'E-commerce', educacao: 'Educação',
-    imobiliaria: 'Imobiliária', financas: 'Finanças',
-    franquia: 'Franquia/Franchising', saude: 'Saúde', saas: 'SAAS',
-    telecom: 'Telecom', turismo: 'Turismo', outro: 'Outro',
-  },
-  cargo: {
-    'socio-empresario': 'Sócio/Empresário',
-    'gerente-lider': 'Gerente/Líder',
-    'colaborador-funcionario': 'Colaborador/Funcionário',
-    'prestador-freelancer': 'Prestador de serviço/Freelancer',
-  },
-  faturamento: {
-    'abaixo-30k': 'Abaixo de R$30 mil',
-    '30k-50k': 'Entre R$30 mil e R$50 mil',
-    '50k-100k': 'Entre R$50 mil e R$100 mil',
-    '100k-300k': 'Entre R$100 mil e R$300 mil',
-    '300k-500k': 'Entre R$300 mil e R$500 mil',
-    '500k-1m': 'Entre R$500 mil e R$1 milhão',
-    'acima-1m': 'Acima de R$1 milhão',
-  },
-  eventos: { sim: 'Sim', nao: 'Não' },
-};
-
-function label(field, slug) {
-  return (SLUG_LABELS[field] && SLUG_LABELS[field][slug]) || slug || '';
-}
-
 function formatWhatsappE164BR(telefoneBruto) {
   /* Form usa máscara "(11) 99999-9999"; back valida `^\+\d{1,3}\s\d{8,15}$`.
      Assume BR: prefixa "+55 " e manda só dígitos. */
@@ -293,7 +262,7 @@ if (leadModal) {
 }
 
 if (leadForm) {
-  const TOTAL_STEPS = 4;
+  const TOTAL_STEPS = 2;
   const telInput = document.getElementById('lf-telefone');
   const statusEl = document.getElementById('lf-status');
   const resultEl = document.getElementById('lead-result');
@@ -302,12 +271,16 @@ if (leadForm) {
   const resultWa = document.getElementById('lead-result-wa');
   const fillEl = document.getElementById('qz-fill');
   const counterEl = document.getElementById('qz-counter');
-  const backBar = document.getElementById('qz-back-bar');
   const stepEls = Array.from(leadForm.querySelectorAll('.qz-step'));
   const progressItems = document.querySelectorAll('.qz-steps li');
 
-  // Respostas coletadas pelos botões-radio dos steps 1-3 + eventos do step 4
-  const answers = { segmento: '', cargo: '', faturamento: '', eventos: '', qual: '' };
+  // Respostas: perfil (botões-radio do step 1) + eventos do step 2
+  const answers = { cargo: '', eventos: '' };
+  const CARGO_LABELS = {
+    'dono-evento': 'Dono(a) do evento',
+    agencia: 'Agência',
+    assessoria: 'Assessor(a) de eventos',
+  };
   let currentStep = 1;
 
   function showStep(n) {
@@ -324,31 +297,31 @@ if (leadForm) {
       li.classList.toggle('is-active', s === n);
       li.classList.toggle('is-done', s < n);
     });
-    // Voltar aparece nos steps 2 e 3 (step 1 sem back, step 4 tem back próprio)
-    if (backBar) backBar.hidden = !(n === 2 || n === 3);
+    // No desktop, já deixa o cursor pronto no primeiro campo do contato
+    if (n === 2 && window.matchMedia('(pointer: fine)').matches) {
+      setTimeout(() => document.getElementById('lf-nome')?.focus({ preventScroll: true }), 200);
+    }
   }
 
-  function selectOption(field, value, qual) {
+  function selectOption(field, value) {
     answers[field] = value;
-    if (field === 'faturamento') answers.qual = qual || '';
     leadForm.querySelectorAll(`.qz-opt[data-field="${field}"]`).forEach((btn) => {
       btn.classList.toggle('is-selected', btn.dataset.value === value);
     });
   }
 
-  function trackStep(field, value, qual) {
+  function trackStep(field, value) {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'lead_step_answer',
       step: currentStep,
       field,
       value,
-      qualificacao: field === 'faturamento' ? (qual || '') : undefined,
     });
   }
 
-  // Auto-avanço nas 3 primeiras etapas ao clicar. No step 4, o clique em Sim/Não
-  // só marca a resposta — o submit final é pelo botão CONTINUAR.
+  // Auto-avanço no step 1 ao clicar. No step 2, o clique em Sim/Não
+  // só marca a resposta — o submit final é pelo botão PEDIR COTAÇÃO.
   leadForm.addEventListener('click', (e) => {
     const back = e.target.closest('[data-qz-back]');
     if (back) {
@@ -360,13 +333,12 @@ if (leadForm) {
     if (!btn) return;
     const field = btn.dataset.field;
     const value = btn.dataset.value;
-    const qual = btn.dataset.qual;
     if (!field || !value) return;
 
-    selectOption(field, value, qual);
-    trackStep(field, value, qual);
+    selectOption(field, value);
+    trackStep(field, value);
 
-    if (field === 'segmento' || field === 'cargo' || field === 'faturamento') {
+    if (field === 'cargo') {
       const nextIdx = Math.min(currentStep + 1, TOTAL_STEPS);
       setTimeout(() => showStep(nextIdx), 240);
     }
@@ -381,11 +353,19 @@ if (leadForm) {
     telInput.value = v;
   });
 
-  function flashStatus(msg) {
+  function flashStatus(msg, fieldEl) {
     if (!statusEl) return;
     statusEl.textContent = msg;
     statusEl.classList.add('is-error');
-    setTimeout(() => statusEl.classList.remove('is-error'), 2000);
+    clearTimeout(flashStatus.timer);
+    flashStatus.timer = setTimeout(() => statusEl.classList.remove('is-error'), 4000);
+    if (fieldEl) {
+      fieldEl.classList.add('is-invalid');
+      const clear = () => fieldEl.classList.remove('is-invalid');
+      fieldEl.addEventListener('input', clear, { once: true });
+      fieldEl.addEventListener('click', clear, { once: true });
+      if (typeof fieldEl.focus === 'function' && fieldEl.tagName === 'INPUT') fieldEl.focus();
+    }
   }
 
   leadForm.addEventListener('submit', (e) => {
@@ -395,38 +375,34 @@ if (leadForm) {
     const email = document.getElementById('lf-email').value.trim().toLowerCase();
     const telefone = document.getElementById('lf-telefone').value.trim();
 
-    // Sanity nos steps anteriores
-    if (!answers.segmento) { showStep(1); return flashStatus('Selecione o segmento.'); }
-    if (!answers.cargo) { showStep(2); return flashStatus('Selecione o cargo.'); }
-    if (!answers.faturamento) { showStep(3); return flashStatus('Selecione o faturamento.'); }
+    // Sanity no step anterior
+    if (!answers.cargo) { showStep(1); return flashStatus('Selecione o seu papel no evento.'); }
 
-    // Validação do step 4
-    if (nome.length < 2) return flashStatus('Preencha o seu nome.');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return flashStatus('E-mail inválido.');
-    if (telefone.replace(/\D/g, '').length < 10) return flashStatus('Telefone inválido.');
-    if (!answers.eventos) return flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".');
+    // Validação do step 2
+    if (nome.length < 2) return flashStatus('Preencha o seu nome.', document.getElementById('lf-nome'));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return flashStatus('E-mail inválido.', document.getElementById('lf-email'));
+    if (telefone.replace(/\D/g, '').length < 10) return flashStatus('Telefone inválido.', telInput);
+    if (!answers.eventos) return flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".', leadForm.querySelector('.qz-radio-row'));
 
-    const isQualified = answers.qual === 'qualificado';
-
+    // Mensagem pré-preenchida que O LEAD envia — pronta, com as respostas
+    // do form pra quem atende, terminando em pergunta fácil de responder
     const waLines = [
-      'Olá! Quero saber mais sobre o Espaço Full Sales para um evento.',
+      'Olá! 🙂',
+      'Acabei de pedir uma cotação pelo site do Espaço Full Sales.',
       '',
       `*Nome:* ${nome}`,
       `*E-mail:* ${email}`,
-      `*Telefone:* ${telefone}`,
-      `*Segmento:* ${label('segmento', answers.segmento)}`,
-      `*Cargo:* ${label('cargo', answers.cargo)}`,
-      `*Faturamento:* ${label('faturamento', answers.faturamento)}`,
-      `*Faz eventos presenciais:* ${label('eventos', answers.eventos)}`,
+      `*Papel no evento:* ${CARGO_LABELS[answers.cargo] || answers.cargo}`,
+      `*Já faço eventos presenciais:* ${answers.eventos === 'sim' ? 'Sim' : 'Não'}`,
+      '',
+      'Pode me ajudar?',
     ];
 
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'lead_form_submit',
-      segmento: answers.segmento,
       cargo: answers.cargo,
-      faturamento: answers.faturamento,
-      qualificacao: answers.qual,
+      qualificacao: 'qualificado',
       eventos_presenciais: answers.eventos,
     });
 
@@ -439,34 +415,23 @@ if (leadForm) {
       email,
       whatsapp: formatWhatsappE164BR(telefone),
       cargo: answers.cargo,
-      segmento: answers.segmento,
-      receita: answers.faturamento,
       eventos: answers.eventos,
       ...getStoredUtms(),
     });
 
     // Substitui o form pela tela de sucesso
     leadForm.hidden = true;
-    if (backBar) backBar.hidden = true;
     if (resultEl) resultEl.hidden = false;
 
-    if (isQualified) {
-      if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
-      if (resultMsg) {
-        resultMsg.textContent =
-          'Se você quer agilizar o seu atendimento, entre em contato pelo WhatsApp.';
-      }
-      if (resultWa) {
-        resultWa.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waLines.join('\n'))}`;
-        resultWa.hidden = false;
-      }
-    } else {
-      if (resultTitle) resultTitle.textContent = 'Obrigado!';
-      if (resultMsg) {
-        resultMsg.textContent =
-          'Em breve um dos nossos representantes entrará em contato para organizarmos o seu evento.';
-      }
-      if (resultWa) resultWa.hidden = true;
+    if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
+    if (resultMsg) {
+      resultMsg.textContent =
+        'Quer agilizar o atendimento? Chama a equipe no WhatsApp: a mensagem já vai pronta, é só enviar.';
+    }
+    if (resultWa) {
+      /* api.whatsapp.com direto: o redirect do wa.me corrompe emoji (🙂 vira �) */
+      resultWa.href = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(waLines.join('\n'))}`;
+      resultWa.hidden = false;
     }
   });
 
