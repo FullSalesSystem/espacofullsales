@@ -777,7 +777,8 @@ body.modal-open { overflow: hidden; }
 /* Result / thank-you state */
 .lead-result {
   text-align: center;
-  padding: 12px 0 4px;
+  padding: 20px clamp(18px, 3vw, 28px) 28px;
+  overflow-y: auto;
 }
 .lead-result-icon {
   display: inline-grid;
@@ -1115,6 +1116,46 @@ body.modal-open { overflow: hidden; }
   color: var(--text-mute);
   font-size: .75rem;
   text-align: center;
+}
+
+/* -------- Mobile: modal vira bottom sheet -------- */
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(32px); }
+  to { opacity: 1; transform: none; }
+}
+@media (max-width: 640px) {
+  .lead-modal {
+    width: 100%;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    margin: auto 0 0;
+    border-radius: 20px 20px 0 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .lead-modal[open] { animation: sheet-in .34s cubic-bezier(.22, 1, .36, 1); }
+  .lead-modal .modal-close {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+  /* Form flexiona dentro do sheet em vez do cap fixo de altura */
+  .qz-form {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+  .lead-result { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  /* Alvos de toque maiores e input ≥16px (iOS não dá zoom no foco) */
+  .qz-opt { min-height: 48px; }
+  .qz-field input {
+    font-size: 1rem;
+    padding: 12px 14px;
+  }
+  .qz-submit { min-height: 50px; }
 }
 
 /* Sem animação pra quem prefere movimento reduzido */
