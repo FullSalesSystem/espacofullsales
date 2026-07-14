@@ -855,7 +855,7 @@ body.modal-open { overflow: hidden; }
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
   color: var(--text-dim);
   font-size: .78rem;
@@ -895,9 +895,9 @@ body.modal-open { overflow: hidden; }
 .qz-name { white-space: nowrap; }
 @media (max-width: 520px) {
   .qz-name { display: none; }
-  /* padding-right afasta o passo 4 do botão de fechar */
+  /* padding-right afasta o último passo do botão de fechar */
   .qz-steps {
-    grid-template-columns: repeat(4, auto);
+    grid-template-columns: repeat(2, auto);
     justify-content: space-between;
     padding-right: 48px;
   }
@@ -945,16 +945,6 @@ body.modal-open { overflow: hidden; }
 }
 @media (min-width: 720px) {
   .qz-options--grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-/* Grid denso pro step de segmento (14 opções): 2 colunas já no mobile */
-.qz-options--dense { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.qz-options--dense .qz-opt { padding-right: 10px; }
-@media (min-width: 720px) {
-  .qz-options--dense { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-/* Step do cargo: rótulos longos, máximo 2 colunas em qualquer largura */
-@media (min-width: 720px) {
-  .qz-options--cols2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .qz-opt {
   position: relative;
@@ -1091,9 +1081,6 @@ body.modal-open { overflow: hidden; }
 .qz-back:hover {
   color: var(--text);
   border-color: rgba(255, 61, 87, 0.4);
-}
-.qz-back-bar {
-  margin-top: 12px;
 }
 
 /* Status / erros */

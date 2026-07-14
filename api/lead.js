@@ -10,73 +10,17 @@ const LEAD_SOURCE = 'FAP06 - Espaço de Eventos';
 const SUPABASE_TABLE = '[Leads] FAP06';
 
 const ALLOWED_CARGOS = new Set([
-  'socio-empresario',
-  'gerente-lider',
-  'colaborador-funcionario',
-  'prestador-freelancer',
-]);
-
-const ALLOWED_SEGMENTOS = new Set([
-  'servico',
-  'varejo',
-  'mentoria',
-  'industria',
-  'ecommerce',
-  'educacao',
-  'imobiliaria',
-  'financas',
-  'franquia',
-  'saude',
-  'saas',
-  'telecom',
-  'turismo',
-  'outro',
-]);
-
-const ALLOWED_RECEITAS = new Set([
-  'abaixo-30k',
-  '30k-50k',
-  '50k-100k',
-  '100k-300k',
-  '300k-500k',
-  '500k-1m',
-  'acima-1m',
+  'dono-evento',
+  'agencia',
+  'assessoria',
 ]);
 
 const ALLOWED_EVENTOS = new Set(['sim', 'nao']);
 
-const SEGMENTO_LABELS = {
-  servico: 'Serviço',
-  varejo: 'Varejo',
-  mentoria: 'Mentoria',
-  industria: 'Indústria',
-  ecommerce: 'E-commerce',
-  educacao: 'Educação',
-  imobiliaria: 'Imobiliária',
-  financas: 'Finanças',
-  franquia: 'Franquia/Franchising',
-  saude: 'Saúde',
-  saas: 'SAAS',
-  telecom: 'Telecom',
-  turismo: 'Turismo',
-  outro: 'Outro',
-};
-
 const CARGO_LABELS = {
-  'socio-empresario': 'Sócio / Empresário',
-  'gerente-lider': 'Gerente / Líder',
-  'colaborador-funcionario': 'Colaborador / Funcionário',
-  'prestador-freelancer': 'Prestador de serviço / Freelancer',
-};
-
-const RECEITA_LABELS = {
-  'abaixo-30k': 'Abaixo de R$ 30 mil',
-  '30k-50k': 'Entre R$ 30 mil e R$ 50 mil',
-  '50k-100k': 'Entre R$ 50 mil e R$ 100 mil',
-  '100k-300k': 'Entre R$ 100 mil e R$ 300 mil',
-  '300k-500k': 'Entre R$ 300 mil e R$ 500 mil',
-  '500k-1m': 'Entre R$ 500 mil e R$ 1 milhão',
-  'acima-1m': 'Acima de R$ 1 milhão',
+  'dono-evento': 'Dono(a) do evento',
+  agencia: 'Agência',
+  assessoria: 'Assessor(a) de eventos',
 };
 
 const EVENTOS_LABELS = {
@@ -123,8 +67,6 @@ function validatePayload(input) {
     email: sanitizeText(input.email, 254).toLowerCase(),
     whatsapp: sanitizeText(input.whatsapp, 24),
     cargo: sanitizeText(input.cargo, 40),
-    segmento: sanitizeText(input.segmento, 40),
-    receita: sanitizeText(input.receita, 40),
     eventos: sanitizeText(input.eventos, 8).toLowerCase(),
     utm_source: sanitizeText(input.utm_source, 120),
     utm_medium: sanitizeText(input.utm_medium, 120),
@@ -140,8 +82,6 @@ function validatePayload(input) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return null;
   if (!/^\+\d{1,3}\s\d{8,15}$/.test(payload.whatsapp)) return null;
   if (!ALLOWED_CARGOS.has(payload.cargo)) return null;
-  if (!ALLOWED_SEGMENTOS.has(payload.segmento)) return null;
-  if (!ALLOWED_RECEITAS.has(payload.receita)) return null;
   if (!ALLOWED_EVENTOS.has(payload.eventos)) return null;
 
   return payload;
@@ -155,26 +95,16 @@ function splitName(fullName) {
   return { firstName, lastName };
 }
 
-function classifyLead(cargo, faturamento) {
-  const isSocioEmpresario = cargo === 'socio-empresario';
-  const isQualificadoFaturamento = new Set([
-    '50k-100k',
-    '100k-300k',
-    '300k-500k',
-    '500k-1m',
-    'acima-1m',
-  ]).has(faturamento);
-
-  if (isSocioEmpresario && isQualificadoFaturamento) return 'qualificado';
-  if (isSocioEmpresario && faturamento === '30k-50k') return 'SemiQualificado';
-  if (!isSocioEmpresario || faturamento === 'abaixo-30k') return 'desqualificado';
-
-  return 'desqualificado';
+/* v2 do form: sem segmento e sem faturamento — todo lead válido
+   entra como qualificado (tag mantida pra compatibilidade com
+   automações existentes no GHL). */
+function classifyLead() {
+  return 'qualificado';
 }
 
 function buildGhlPayload(payload, locationId) {
   const { firstName, lastName } = splitName(payload.nome);
-  const classificacao = classifyLead(payload.cargo, payload.receita);
+  const classificacao = classifyLead();
 
   return {
     locationId,
@@ -189,8 +119,6 @@ function buildGhlPayload(payload, locationId) {
       'fap6-cadastro-trigger',
       classificacao,
       `cargo:${payload.cargo}`,
-      `segmento:${payload.segmento}`,
-      `receita:${payload.receita}`,
     ],
   };
 }
@@ -202,8 +130,10 @@ async function sendToSupabase(supabaseUrl, supabaseKey, payload) {
     email: payload.email,
     telefone: payload.whatsapp,
     cargo: payload.cargo,
-    segmento: payload.segmento,
-    faturamento: payload.receita,
+    /* v2 do form não pergunta mais segmento/faturamento;
+       colunas seguem existindo na tabela, vão vazias */
+    segmento: '',
+    faturamento: '',
     utm_source: payload.utm_source,
     utm_medium: payload.utm_medium,
     utm_campaign: payload.utm_campaign,
@@ -281,16 +211,14 @@ async function searchContactOpportunities(ghlBaseUrl, pitToken, locationId, cont
 }
 
 function buildNoteBody(payload) {
-  const classificacao = classifyLead(payload.cargo, payload.receita);
+  const classificacao = classifyLead();
   const lines = [
     'Respostas FAP06 — Espaço de Eventos',
     '',
     `• Nome: ${payload.nome}`,
     `• E-mail: ${payload.email}`,
     `• Telefone: ${payload.whatsapp}`,
-    `• Segmento: ${SEGMENTO_LABELS[payload.segmento] || payload.segmento}`,
-    `• Cargo: ${CARGO_LABELS[payload.cargo] || payload.cargo}`,
-    `• Receita mensal: ${RECEITA_LABELS[payload.receita] || payload.receita}`,
+    `• Papel no evento: ${CARGO_LABELS[payload.cargo] || payload.cargo}`,
     `• Faz eventos presenciais: ${EVENTOS_LABELS[payload.eventos] || payload.eventos}`,
     '',
     `Classificação: ${classificacao}`,
@@ -517,7 +445,7 @@ async function handler(req, res) {
   }
 
   try {
-    const classificacao = classifyLead(payload.cargo, payload.receita);
+    const classificacao = classifyLead();
     const { response, data } = await sendToHighLevel(ghlBaseUrl, pitToken, locationId, payload);
 
     if (!response.ok) return json(res, 502, { error: 'upstream_rejected' });
