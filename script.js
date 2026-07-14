@@ -439,16 +439,22 @@ if (leadForm) {
     leadForm.hidden = true;
     if (resultEl) resultEl.hidden = false;
 
+    /* api.whatsapp.com direto: o redirect do wa.me corrompe emoji (🙂 vira �) */
+    const waUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(waLines.join('\n'))}`;
+
     if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
     if (resultMsg) {
       resultMsg.textContent =
-        'Quer agilizar o atendimento? Chama a equipe no WhatsApp: a mensagem já vai pronta, é só enviar.';
+        'Estamos te levando pro WhatsApp com a mensagem pronta. Se não abrir sozinho, toque no botão abaixo.';
     }
     if (resultWa) {
-      /* api.whatsapp.com direto: o redirect do wa.me corrompe emoji (🙂 vira �) */
-      resultWa.href = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(waLines.join('\n'))}`;
+      resultWa.href = waUrl;
       resultWa.hidden = false;
     }
+
+    /* Redireciona sozinho. O delay dá tempo do GTM disparar o form_submit;
+       o lead já foi pro backend via sendBeacon/keepalive. */
+    setTimeout(() => { window.location.href = waUrl; }, 1200);
   });
 
   // Inicializa no step 1
