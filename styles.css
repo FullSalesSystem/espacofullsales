@@ -946,6 +946,10 @@ body.modal-open { overflow: hidden; }
 @media (min-width: 720px) {
   .qz-options--grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+/* Grupo com 4 opções: máximo 2 colunas (2x2) em qualquer largura */
+@media (min-width: 720px) {
+  .qz-options--cols2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .qz-opt {
   position: relative;
   display: flex;
@@ -1112,14 +1116,12 @@ body.modal-open { overflow: hidden; }
 }
 @media (max-width: 640px) {
   .lead-modal {
-    width: 100%;
-    max-height: calc(100vh - 32px);
-    max-height: calc(100dvh - 32px);
-    margin: auto 0 0;
-    border-radius: 20px 20px 0 0;
-    border-left: 0;
-    border-right: 0;
-    border-bottom: 0;
+    width: calc(100% - 20px);
+    max-height: calc(100vh - 96px);
+    max-height: calc(100dvh - 96px);
+    /* Flutua um pouco acima do rodapé (não cola embaixo) */
+    margin: auto auto calc(28px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px;
   }
   .lead-modal[open] { animation: sheet-in .34s cubic-bezier(.22, 1, .36, 1); }
   .lead-modal .modal-close {
@@ -1133,9 +1135,9 @@ body.modal-open { overflow: hidden; }
     flex: 1 1 auto;
     min-height: 0;
     max-height: none;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    padding-bottom: 16px;
   }
-  .lead-result { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .lead-result { padding-bottom: 24px; }
   /* Alvos de toque maiores e input ≥16px (iOS não dá zoom no foco) */
   .qz-opt { min-height: 48px; }
   .qz-field input {

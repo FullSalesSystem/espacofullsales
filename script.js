@@ -280,6 +280,7 @@ if (leadForm) {
     'dono-evento': 'Dono(a) do evento',
     agencia: 'Agência',
     assessoria: 'Assessor(a) de eventos',
+    outro: 'Outro',
   };
   let currentStep = 1;
 
