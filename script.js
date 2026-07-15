@@ -239,7 +239,7 @@ function postLeadToApi(payload) {
 }
 
 // Lead form modal -> WhatsApp
-const WHATSAPP_NUMBER = '5511910458564';
+const WHATSAPP_NUMBER = '551148633270';
 const leadModal = document.getElementById('lead-modal');
 const leadForm = document.getElementById('lead-form');
 
