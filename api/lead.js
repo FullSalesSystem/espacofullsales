@@ -66,7 +66,7 @@ function sanitizeText(value, maxLen) {
    Nunca rejeita o payload por causa dele — fora do padrão passa sanitizado. */
 function normalizeInstagram(value) {
   const v = sanitizeText(value, 80)
-    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+    .replace(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\//i, '')
     .replace(/[?#/].*$/, '')
     .replace(/\s+/g, '')
     .replace(/^@+/, '');
