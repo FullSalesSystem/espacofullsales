@@ -89,16 +89,6 @@ function validatePayload(input) {
   return payload;
 }
 
-/* Guard anti-teste: barra submissões de QA/manuais pra não sujar
-   Supabase e GHL — emails @example.com/@test.com ou utm_source
-   começando com "teste" ou "smoke-". utm_source "e2e-check" segue
-   permitido (é o padrão do teste e2e legítimo). */
-function isTestLead(payload) {
-  if (/@(example\.com|test\.com)$/i.test(payload.email)) return true;
-  if (/^(teste|smoke-)/i.test(payload.utm_source)) return true;
-  return false;
-}
-
 function splitName(fullName) {
   const clean = sanitizeText(fullName, 120);
   const parts = clean.split(' ').filter(Boolean);
@@ -429,17 +419,6 @@ async function handler(req, res) {
       keys: rawBody && typeof rawBody === 'object' ? Object.keys(rawBody) : null,
     });
     return json(res, 400, { error: 'invalid_payload' });
-  }
-
-  if (isTestLead(payload)) {
-    console.warn('[lead] test lead rejected', {
-      email: payload.email,
-      utm_source: payload.utm_source,
-    });
-    return json(res, 400, {
-      error: 'test_lead_rejected',
-      message: 'Lead de teste bloqueado: email @example.com/@test.com ou utm_source teste*/smoke-*. Para teste e2e use utm_source=e2e-check.',
-    });
   }
 
   console.log('[lead] utms received', {
