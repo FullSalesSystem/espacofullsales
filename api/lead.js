@@ -168,10 +168,12 @@ async function sendToSupabase(supabaseUrl, supabaseKey, payload) {
     data: payload.submitted_at,
   };
 
-  /* chave só entra quando preenchida: se a coluna `instagram` ainda não
+  /* chaves novas só entram quando preenchidas: se a coluna ainda não
      existir na tabela, o PostgREST rejeita o insert inteiro (PGRST204) —
-     nesse caso a gente re-insere sem o campo pra nunca perder o lead */
+     o retry abaixo remove a coluna reclamada e reinsere, pra nunca
+     perder o lead enquanto a migration não roda */
   if (payload.instagram) row.instagram = payload.instagram;
+  if (payload.eventos) row.eventos = payload.eventos;
 
   const insert = (body) => fetch(endpoint, {
     method: 'POST',
@@ -186,22 +188,22 @@ async function sendToSupabase(supabaseUrl, supabaseKey, payload) {
 
   let response = await insert(row);
 
-  if (!response.ok && row.instagram) {
-    const firstError = await response.text().catch(() => '');
-    if (firstError.includes('instagram')) {
-      console.warn('[supabase] coluna instagram ausente — reinserindo sem o campo', {
-        status: response.status,
-      });
-      const { instagram, ...semInstagram } = row;
-      response = await insert(semInstagram);
-    } else {
+  for (let tentativa = 0; tentativa < 3 && !response.ok; tentativa += 1) {
+    const errorBody = await response.text().catch(() => '');
+    const colFaltando = /Could not find the '([^']+)' column/.exec(errorBody);
+    if (!colFaltando || !(colFaltando[1] in row)) {
       console.error('[supabase] insert failed', {
         status: response.status,
         endpoint,
-        error: firstError.slice(0, 500),
+        error: errorBody.slice(0, 500),
       });
-      return { ok: response.ok, status: response.status };
+      return { ok: false, status: response.status };
     }
+    console.warn('[supabase] coluna ausente na tabela — reinserindo sem o campo', {
+      coluna: colFaltando[1],
+    });
+    delete row[colFaltando[1]];
+    response = await insert(row);
   }
 
   if (!response.ok) {
