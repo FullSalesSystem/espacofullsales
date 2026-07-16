@@ -402,11 +402,12 @@
         <div class="qz-progress-bar"><span class="qz-progress-fill" id="qz-fill"></span></div>
         <ol class="qz-steps">
           <li data-step="1"><span class="qz-num">1</span><span class="qz-name">Perfil</span></li>
-          <li data-step="2"><span class="qz-num">2</span><span class="qz-name">Contato</span></li>
+          <li data-step="2"><span class="qz-num">2</span><span class="qz-name">Instagram</span></li>
+          <li data-step="3"><span class="qz-num">3</span><span class="qz-name">Contato</span></li>
         </ol>
         <div class="qz-meta">
-          <span id="qz-counter">Passo 1 de 2</span>
-          <span id="qz-eta">~30 segundos</span>
+          <span id="qz-counter">Passo 1 de 3</span>
+          <span id="qz-eta">~40 segundos</span>
         </div>
       </div>
 
@@ -422,8 +423,23 @@
           </div>
         </section>
 
-        <!-- STEP 2: CONTATO -->
-        <section class="qz-step" data-step="2" hidden aria-labelledby="qz-title-2">
+        <!-- STEP 2: INSTAGRAM -->
+        <section class="qz-step" data-step="2" hidden aria-labelledby="qz-title-ig">
+          <h2 class="qz-title" id="qz-title-ig">Qual o @ do Instagram do seu evento ou negócio?</h2>
+
+          <div class="qz-field">
+            <label for="lf-instagram">Instagram</label>
+            <input type="text" id="lf-instagram" name="instagram" placeholder="@seuperfil" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="60" />
+          </div>
+
+          <div class="qz-nav">
+            <button type="button" class="btn btn-ghost qz-back" data-qz-back>← Voltar</button>
+            <button type="button" class="btn btn-primary" data-qz-next>Continuar <span aria-hidden="true">→</span></button>
+          </div>
+        </section>
+
+        <!-- STEP 3: CONTATO -->
+        <section class="qz-step" data-step="3" hidden aria-labelledby="qz-title-2">
           <h2 class="qz-title" id="qz-title-2">Pra onde enviamos a sua cotação?</h2>
 
           <div class="qz-field">

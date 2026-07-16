@@ -8,6 +8,8 @@ const RICARDO_USER_ID = 'Zy81V8eIFy85ooQzwRWl';  // Ricardo Patreze
 const MARINA_TARGET_SHARE = 0.6;                 // 60/40 rebalance
 const LEAD_SOURCE = 'FAP06 - Espaço de Eventos';
 const SUPABASE_TABLE = '[Leads] FAP06';
+/* Custom field GHL "Qual o seu perfil do Instagram?" (mesmo do FAP01) */
+const INSTAGRAM_FIELD_ID = '3pzsEnGon1ZhyyoUKOgf';
 
 const ALLOWED_CARGOS = new Set([
   'dono-evento',
@@ -60,6 +62,18 @@ function sanitizeText(value, maxLen) {
   return String(value || '').trim().replace(/\s+/g, ' ').slice(0, maxLen);
 }
 
+/* Aceita "@fulano", "fulano" ou o link do perfil; devolve "@fulano".
+   Nunca rejeita o payload por causa dele — fora do padrão passa sanitizado. */
+function normalizeInstagram(value) {
+  const v = sanitizeText(value, 80)
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+    .replace(/[?#/].*$/, '')
+    .replace(/\s+/g, '')
+    .replace(/^@+/, '');
+  if (!v) return '';
+  return /^[A-Za-z0-9._]{1,30}$/.test(v) ? `@${v}` : sanitizeText(value, 60);
+}
+
 function validatePayload(input) {
   const payload = {
     submission_id: sanitizeText(input.submission_id, 80),
@@ -70,6 +84,7 @@ function validatePayload(input) {
     whatsapp: sanitizeText(input.whatsapp, 24),
     cargo: sanitizeText(input.cargo, 40),
     eventos: sanitizeText(input.eventos, 8).toLowerCase(),
+    instagram: normalizeInstagram(input.instagram),
     utm_source: sanitizeText(input.utm_source, 120),
     utm_medium: sanitizeText(input.utm_medium, 120),
     utm_campaign: sanitizeText(input.utm_campaign, 200),
@@ -108,7 +123,7 @@ function buildGhlPayload(payload, locationId) {
   const { firstName, lastName } = splitName(payload.nome);
   const classificacao = classifyLead();
 
-  return {
+  const body = {
     locationId,
     firstName,
     lastName,
@@ -123,6 +138,14 @@ function buildGhlPayload(payload, locationId) {
       `cargo:${payload.cargo}`,
     ],
   };
+
+  /* Instagram NÃO vira tag (@ único por lead explodiria o registro de tags).
+     Vai no custom field do contato, visível no painel do GHL. */
+  if (payload.instagram) {
+    body.customFields = [{ id: INSTAGRAM_FIELD_ID, field_value: payload.instagram }];
+  }
+
+  return body;
 }
 
 async function sendToSupabase(supabaseUrl, supabaseKey, payload) {
@@ -144,6 +167,10 @@ async function sendToSupabase(supabaseUrl, supabaseKey, payload) {
     url: payload.page,
     data: payload.submitted_at,
   };
+
+  /* chave só entra quando preenchida: se a coluna `instagram` ainda não
+     existir na tabela, o PostgREST rejeitaria o insert inteiro (PGRST204) */
+  if (payload.instagram) row.instagram = payload.instagram;
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -222,11 +249,16 @@ function buildNoteBody(payload) {
     `• Telefone: ${payload.whatsapp}`,
     `• Papel no evento: ${CARGO_LABELS[payload.cargo] || payload.cargo}`,
     `• Faz eventos presenciais: ${EVENTOS_LABELS[payload.eventos] || payload.eventos}`,
+  ];
+  if (payload.instagram) {
+    lines.push(`• Instagram: ${payload.instagram}`);
+  }
+  lines.push(
     '',
     `Classificação: ${classificacao}`,
     `Página: ${payload.page}`,
     `Enviado em: ${payload.submitted_at}`,
-  ];
+  );
 
   const utmEntries = [
     payload.utm_source && `source=${payload.utm_source}`,

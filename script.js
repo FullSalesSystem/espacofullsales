@@ -277,8 +277,9 @@ if (leadModal) {
 }
 
 if (leadForm) {
-  const TOTAL_STEPS = 2;
+  const TOTAL_STEPS = 3;
   const telInput = document.getElementById('lf-telefone');
+  const igInput = document.getElementById('lf-instagram');
   const statusEl = document.getElementById('lf-status');
   const resultEl = document.getElementById('lead-result');
   const resultTitle = document.getElementById('lead-result-title');
@@ -313,9 +314,10 @@ if (leadForm) {
       li.classList.toggle('is-active', s === n);
       li.classList.toggle('is-done', s < n);
     });
-    // No desktop, já deixa o cursor pronto no primeiro campo do contato
-    if (n === 2 && window.matchMedia('(pointer: fine)').matches) {
-      setTimeout(() => document.getElementById('lf-nome')?.focus({ preventScroll: true }), 200);
+    // No desktop, já deixa o cursor pronto no primeiro campo do passo
+    if (window.matchMedia('(pointer: fine)').matches) {
+      const focusEl = n === 2 ? igInput : n === 3 ? document.getElementById('lf-nome') : null;
+      if (focusEl) setTimeout(() => focusEl.focus({ preventScroll: true }), 200);
     }
   }
 
@@ -345,6 +347,17 @@ if (leadForm) {
       if (currentStep > 1) showStep(currentStep - 1);
       return;
     }
+    const next = e.target.closest('[data-qz-next]');
+    if (next) {
+      e.preventDefault();
+      // Passo do Instagram: obrigatório antes de seguir pro contato
+      if (currentStep === 2 && !(igInput?.value || '').trim()) {
+        return flashStatus('Informe o @ do Instagram.', igInput);
+      }
+      if (igInput?.value) trackStep('instagram', 'preenchido');
+      showStep(Math.min(currentStep + 1, TOTAL_STEPS));
+      return;
+    }
     const btn = e.target.closest('.qz-opt');
     if (!btn) return;
     const field = btn.dataset.field;
@@ -357,6 +370,14 @@ if (leadForm) {
     if (field === 'cargo') {
       const nextIdx = Math.min(currentStep + 1, TOTAL_STEPS);
       setTimeout(() => showStep(nextIdx), 240);
+    }
+  });
+
+  // Enter no campo do Instagram avança (sem submeter o form inteiro)
+  igInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      leadForm.querySelector('[data-qz-next]')?.click();
     }
   });
 
@@ -391,8 +412,10 @@ if (leadForm) {
     const email = document.getElementById('lf-email').value.trim().toLowerCase();
     const telefone = document.getElementById('lf-telefone').value.trim();
 
-    // Sanity no step anterior
+    // Sanity nos steps anteriores
     if (!answers.cargo) { showStep(1); return flashStatus('Selecione o seu papel no evento.'); }
+    const instagram = (igInput?.value || '').trim();
+    if (!instagram) { showStep(2); return flashStatus('Informe o @ do Instagram.', igInput); }
 
     // Validação do step 2
     if (nome.length < 2) return flashStatus('Preencha o seu nome.', document.getElementById('lf-nome'));
@@ -409,6 +432,7 @@ if (leadForm) {
       `*Nome:* ${nome}`,
       `*E-mail:* ${email}`,
       `*Papel no evento:* ${CARGO_LABELS[answers.cargo] || answers.cargo}`,
+      `*Instagram:* ${instagram}`,
       `*Já faço eventos presenciais:* ${answers.eventos === 'sim' ? 'Sim' : 'Não'}`,
       '',
       'Pode me ajudar?',
@@ -432,6 +456,7 @@ if (leadForm) {
       whatsapp: formatWhatsappE164BR(telefone),
       cargo: answers.cargo,
       eventos: answers.eventos,
+      instagram,
       ...getStoredUtms(),
     });
 
