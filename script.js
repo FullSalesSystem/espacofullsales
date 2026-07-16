@@ -316,7 +316,7 @@ if (leadForm) {
     });
     // No desktop, já deixa o cursor pronto no primeiro campo do passo
     if (window.matchMedia('(pointer: fine)').matches) {
-      const focusEl = n === 2 ? igInput : n === 3 ? document.getElementById('lf-nome') : null;
+      const focusEl = n === 2 ? document.getElementById('lf-nome') : n === 3 ? igInput : null;
       if (focusEl) setTimeout(() => focusEl.focus({ preventScroll: true }), 200);
     }
   }
@@ -350,12 +350,13 @@ if (leadForm) {
     const next = e.target.closest('[data-qz-next]');
     if (next) {
       e.preventDefault();
-      // Passo do Instagram: obrigatório antes de seguir pro contato
-      if (currentStep === 2 && !(igInput?.value || '').trim()) {
-        return flashStatus('Informe o @ do Instagram.', igInput);
+      // Passo do contato: valida e CAPTURA o lead antes da etapa do Instagram —
+      // quem abandonar no Instagram já está no CRM.
+      if (currentStep === 2) {
+        if (!validarContato()) return;
+        capturarLead();
+        showStep(3);
       }
-      if (igInput?.value) trackStep('instagram', 'preenchido');
-      showStep(Math.min(currentStep + 1, TOTAL_STEPS));
       return;
     }
     const btn = e.target.closest('.qz-opt');
@@ -373,12 +374,14 @@ if (leadForm) {
     }
   });
 
-  // Enter no campo do Instagram avança (sem submeter o form inteiro)
-  igInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      leadForm.querySelector('[data-qz-next]')?.click();
-    }
+  // Enter nos campos do contato avança pro Instagram (sem submeter o form inteiro)
+  ['lf-nome', 'lf-email', 'lf-telefone'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        leadForm.querySelector('[data-qz-next]')?.click();
+      }
+    });
   });
 
   // Máscara telefone: (11) 99999-9999
@@ -391,11 +394,12 @@ if (leadForm) {
   });
 
   function flashStatus(msg, fieldEl) {
-    if (!statusEl) return;
-    statusEl.textContent = msg;
-    statusEl.classList.add('is-error');
+    const el = currentStep === 3 ? document.getElementById('lf-status-ig') : statusEl;
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('is-error');
     clearTimeout(flashStatus.timer);
-    flashStatus.timer = setTimeout(() => statusEl.classList.remove('is-error'), 4000);
+    flashStatus.timer = setTimeout(() => el.classList.remove('is-error'), 4000);
     if (fieldEl) {
       fieldEl.classList.add('is-invalid');
       const clear = () => fieldEl.classList.remove('is-invalid');
@@ -405,23 +409,89 @@ if (leadForm) {
     }
   }
 
+  // Validação do passo de contato (2)
+  function validarContato() {
+    const nome = document.getElementById('lf-nome').value.trim();
+    const email = document.getElementById('lf-email').value.trim().toLowerCase();
+    const telefone = document.getElementById('lf-telefone').value.trim();
+    if (!answers.cargo) { showStep(1); flashStatus('Selecione o seu papel no evento.'); return false; }
+    if (nome.length < 2) { flashStatus('Preencha o seu nome.', document.getElementById('lf-nome')); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { flashStatus('E-mail inválido.', document.getElementById('lf-email')); return false; }
+    if (telefone.replace(/\D/g, '').length < 10) { flashStatus('Telefone inválido.', telInput); return false; }
+    if (!answers.eventos) { flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".', leadForm.querySelector('.qz-radio-row')); return false; }
+    return true;
+  }
+
+  /* ── CAPTURA EM DUAS FASES ──
+     Fase 1: ao concluir o contato (antes da etapa do Instagram) o lead
+     vai INTEIRO pro backend — abandono no Instagram não perde o lead.
+     Fase 2 (no submit): só atualiza contato/linha com o @. */
+  let leadCapturado = null;
+
+  function capturarLead() {
+    const nome = document.getElementById('lf-nome').value.trim();
+    const email = document.getElementById('lf-email').value.trim().toLowerCase();
+    const whatsapp = formatWhatsappE164BR(document.getElementById('lf-telefone').value.trim());
+    if (leadCapturado && leadCapturado.email === email && leadCapturado.whatsapp === whatsapp) return;
+
+    const submissionId = generateSubmissionId();
+    const submittedAt = new Date().toISOString();
+    leadCapturado = { submission_id: submissionId, submitted_at: submittedAt, email, whatsapp };
+
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'lead_form_submit',
+      cargo: answers.cargo,
+      qualificacao: 'qualificado',
+      eventos_presenciais: answers.eventos,
+    });
+
+    postLeadToApi({
+      submission_id: submissionId,
+      submitted_at: submittedAt,
+      page: location.href,
+      nome,
+      email,
+      whatsapp,
+      cargo: answers.cargo,
+      eventos: answers.eventos,
+      instagram: '',
+      ...getStoredUtms(),
+    });
+  }
+
   leadForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
     const nome = document.getElementById('lf-nome').value.trim();
     const email = document.getElementById('lf-email').value.trim().toLowerCase();
-    const telefone = document.getElementById('lf-telefone').value.trim();
 
-    // Sanity nos steps anteriores
-    if (!answers.cargo) { showStep(1); return flashStatus('Selecione o seu papel no evento.'); }
+    // Segurança: se por algum caminho o lead não foi capturado no passo 2, volta lá
+    if (!leadCapturado) { showStep(2); return flashStatus('Confirme seus dados de contato.'); }
+
     const instagram = (igInput?.value || '').trim();
-    if (!instagram) { showStep(2); return flashStatus('Informe o @ do Instagram.', igInput); }
+    if (!instagram) return flashStatus('Informe o @ do Instagram.', igInput);
 
-    // Validação do step 2
-    if (nome.length < 2) return flashStatus('Preencha o seu nome.', document.getElementById('lf-nome'));
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return flashStatus('E-mail inválido.', document.getElementById('lf-email'));
-    if (telefone.replace(/\D/g, '').length < 10) return flashStatus('Telefone inválido.', telInput);
-    if (!answers.eventos) return flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".', leadForm.querySelector('.qz-radio-row'));
+    trackStep('instagram', 'preenchido');
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: 'lead_instagram_complete' });
+
+    // Fase 2 — atualiza o contato no GHL e a linha no Supabase com o @
+    try {
+      fetch('/api/lead-instagram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submission_id: leadCapturado.submission_id,
+          submitted_at: leadCapturado.submitted_at,
+          page: location.href,
+          email: leadCapturado.email,
+          whatsapp: leadCapturado.whatsapp,
+          instagram,
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (_) {}
 
     // Mensagem pré-preenchida que O LEAD envia — pronta, com as respostas
     // do form pra quem atende, terminando em pergunta fácil de responder
@@ -438,27 +508,7 @@ if (leadForm) {
       'Pode me ajudar?',
     ];
 
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      event: 'lead_form_submit',
-      cargo: answers.cargo,
-      qualificacao: 'qualificado',
-      eventos_presenciais: answers.eventos,
-    });
-
-    // Backend — Supabase [Leads] FAP06 + GHL (10.Eventos, Marina/Ricardo 60/40)
-    postLeadToApi({
-      submission_id: generateSubmissionId(),
-      submitted_at: new Date().toISOString(),
-      page: location.href,
-      nome,
-      email,
-      whatsapp: formatWhatsappE164BR(telefone),
-      cargo: answers.cargo,
-      eventos: answers.eventos,
-      instagram,
-      ...getStoredUtms(),
-    });
+    // (o lead já foi capturado na fase 1, ao concluir o contato)
 
     // Substitui o form pela tela de sucesso
     leadForm.hidden = true;
