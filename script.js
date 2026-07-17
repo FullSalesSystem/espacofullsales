@@ -245,14 +245,15 @@ const leadForm = document.getElementById('lead-form');
 
 // Open / close modal
 if (leadModal) {
+  /* Abre via atributo [open] (dialog não-modal), sem showModal()/top-layer.
+     No Safari do iPhone o top-layer nativo renderizava o conteúdo do <dialog>
+     como tela preta — o overlay fixo comum (CSS) funciona em todos os motores. */
   const openModal = () => {
-    if (typeof leadModal.showModal === 'function') leadModal.showModal();
-    else leadModal.setAttribute('open', '');
+    leadModal.setAttribute('open', '');
     document.body.classList.add('modal-open');
   };
   const closeModal = () => {
-    if (typeof leadModal.close === 'function') leadModal.close();
-    else leadModal.removeAttribute('open');
+    leadModal.removeAttribute('open');
     document.body.classList.remove('modal-open');
   };
 
@@ -267,12 +268,13 @@ if (leadModal) {
     btn.addEventListener('click', closeModal);
   });
 
-  // Close on backdrop click and on native dialog close (Esc)
+  // Fecha ao tocar no escurecimento (fora do card)
   leadModal.addEventListener('click', (e) => {
     if (e.target === leadModal) closeModal();
   });
-  leadModal.addEventListener('close', () => {
-    document.body.classList.remove('modal-open');
+  // Fecha com Esc (top-layer nativo não está mais em uso)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && leadModal.hasAttribute('open')) closeModal();
   });
 }
 
