@@ -608,6 +608,141 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   filter: grayscale(0.3) contrast(1.05);
 }
 
+/* -------- Planta do espaço -------- */
+.planta-grid { align-items: center; }
+.planta-text .prose { margin-top: 6px; }
+.planta-perks { margin-top: 24px; margin-bottom: 0; }
+.planta-perks strong { color: var(--text); font-weight: 600; }
+
+.planta-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.planta-zoom {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  cursor: zoom-in;
+}
+.planta-zoom img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .planta-zoom img { transition: transform .6s cubic-bezier(.22, 1, .36, 1); }
+  .planta-zoom:hover img { transform: scale(1.03); }
+}
+.planta-zoom-hint {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: .82rem;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: 999px;
+  opacity: .92;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.planta-zoom-ico { font-size: 1rem; line-height: 1; }
+@media (hover: hover) {
+  .planta-zoom .planta-zoom-hint { opacity: 0; transform: translateY(6px); }
+  .planta-zoom:hover .planta-zoom-hint,
+  .planta-zoom:focus-visible .planta-zoom-hint { opacity: .95; transform: none; }
+}
+.planta-zoom:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.planta-figure figcaption {
+  color: var(--text-mute);
+  font-size: .85rem;
+  text-align: center;
+}
+
+.planta-cta {
+  margin-top: clamp(40px, 6vw, 64px);
+  text-align: center;
+}
+.planta-cue {
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  margin: 0 0 18px;
+}
+
+/* Lightbox da planta */
+.planta-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(5, 6, 8, 0.92);
+}
+.planta-lightbox:not([hidden]) {
+  display: flex;
+  animation: planta-lb-in .2s ease;
+}
+@keyframes planta-lb-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.planta-lightbox-img {
+  max-width: 95vw;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: default;
+}
+.planta-lightbox-close {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  right: 16px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.planta-lightbox-close:hover { border-color: var(--accent); background: var(--accent-soft); }
+.planta-lightbox-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .planta-lightbox:not([hidden]) { animation: none; }
+}
+
 /* -------- CTA -------- */
 .section-cta {
   background:

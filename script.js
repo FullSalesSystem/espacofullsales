@@ -580,3 +580,60 @@ if (leadForm) {
   // Inicializa no step 1
   showStep(1);
 }
+
+/* ── Lightbox da planta ──────────────────────────────────────────
+   Overlay fixo comum (sem top-layer nativo, mesma decisão do modal
+   por causa do Safari iOS). Abre no clique da imagem, fecha com
+   clique fora / Esc / botão. Foco é movido pro botão de fechar e
+   devolvido ao gatilho ao fechar; Tab fica preso dentro do overlay. */
+(function initPlantaLightbox() {
+  const lightbox = document.getElementById('planta-lightbox');
+  const triggers = document.querySelectorAll('[data-open-lightbox]');
+  if (!lightbox || !triggers.length) return;
+
+  const closeBtn = lightbox.querySelector('[data-close-lightbox]');
+  let lastTrigger = null;
+
+  const openLightbox = (trigger) => {
+    lastTrigger = trigger || null;
+    lightbox.hidden = false;
+    document.body.classList.add('modal-open');
+    if (closeBtn) closeBtn.focus({ preventScroll: true });
+  };
+
+  const closeLightbox = () => {
+    if (lightbox.hidden) return;
+    lightbox.hidden = true;
+    document.body.classList.remove('modal-open');
+    if (lastTrigger && typeof lastTrigger.focus === 'function') {
+      lastTrigger.focus({ preventScroll: true });
+    }
+    lastTrigger = null;
+  };
+
+  triggers.forEach((trigger) => {
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      openLightbox(trigger);
+    });
+  });
+
+  closeBtn?.addEventListener('click', closeLightbox);
+
+  // Clique no escurecimento (fora da imagem) fecha
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (lightbox.hidden) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeLightbox();
+    } else if (e.key === 'Tab') {
+      // Único elemento focável é o botão de fechar — prende o foco nele
+      e.preventDefault();
+      closeBtn?.focus({ preventScroll: true });
+    }
+  });
+})();
