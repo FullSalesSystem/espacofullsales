@@ -214,10 +214,42 @@ function generateSubmissionId() {
   return 'fap6-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
 }
 
-function formatWhatsappE164BR(telefoneBruto) {
-  /* Form usa máscara "(11) 99999-9999"; back valida `^\+\d{1,3}\s\d{8,15}$`.
-     Assume BR: prefixa "+55 " e manda só dígitos. */
-  const digits = String(telefoneBruto || '').replace(/\D/g, '');
+/* ── Telefone internacional (modo "+") ──────────────────────────
+   Primeiro caractere "+" no campo = modo internacional livre (sem
+   máscara BR). Código do país (ITU): 1 e 7 têm 1 dígito; conjunto
+   fechado de 2 dígitos; o resto tem 3. */
+const CC_1DIGIT = new Set(['1', '7']);
+const CC_2DIGIT = new Set([
+  '20', '27', '30', '31', '32', '33', '34', '36', '39',
+  '40', '41', '43', '44', '45', '46', '47', '48', '49',
+  '51', '52', '53', '54', '55', '56', '57', '58',
+  '60', '61', '62', '63', '64', '65', '66',
+  '81', '82', '84', '86',
+  '90', '91', '92', '93', '94', '95', '98',
+]);
+
+/* "+351 912345678" | "+351912345678" -> "+351 912345678"; null se inválido
+   (número sem o código do país precisa ter 8-15 dígitos). */
+function normalizeIntlPhone(raw) {
+  const v = String(raw || '').trim();
+  if (v.charAt(0) !== '+' || !/^\+[\d\s]+$/.test(v)) return null;
+  const digits = v.slice(1).replace(/\D/g, '');
+  let cc;
+  if (CC_1DIGIT.has(digits.slice(0, 1))) cc = digits.slice(0, 1);
+  else if (CC_2DIGIT.has(digits.slice(0, 2))) cc = digits.slice(0, 2);
+  else cc = digits.slice(0, 3);
+  const num = digits.slice(cc.length);
+  if (!cc || num.length < 8 || num.length > 15) return null;
+  return `+${cc} ${num}`;
+}
+
+function formatWhatsappE164(telefoneBruto) {
+  /* Back valida `^\+\d{1,3}\s\d{8,15}$`.
+     Modo internacional ("+" primeiro): "+CC NUMERO".
+     Modo BR (padrão, máscara "(11) 99999-9999"): prefixa "+55 ". */
+  const raw = String(telefoneBruto || '').trim();
+  if (raw.charAt(0) === '+') return normalizeIntlPhone(raw) || '';
+  const digits = raw.replace(/\D/g, '');
   if (digits.length < 10) return '';
   return `+55 ${digits}`;
 }
@@ -386,9 +418,17 @@ if (leadForm) {
     });
   });
 
-  // Máscara telefone: (11) 99999-9999
+  // Máscara telefone: (11) 99999-9999.
+  // Primeiro caractere "+": modo internacional livre — sem máscara,
+  // aceita só +, dígitos e espaços (regra única dos funis FSS).
   telInput?.addEventListener('input', () => {
-    let v = telInput.value.replace(/\D/g, '').slice(0, 11);
+    const raw = telInput.value.replace(/^\s+/, '');
+    if (raw.charAt(0) === '+') {
+      const clean = '+' + raw.slice(1).replace(/[^\d ]/g, '').replace(/ {2,}/g, ' ');
+      if (clean !== telInput.value) telInput.value = clean;
+      return;
+    }
+    let v = raw.replace(/\D/g, '').slice(0, 11);
     if (v.length > 6) v = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
     else if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
     else if (v.length > 0) v = `(${v}`;
@@ -419,7 +459,10 @@ if (leadForm) {
     if (!answers.cargo) { showStep(1); flashStatus('Selecione o seu papel no evento.'); return false; }
     if (nome.length < 2) { flashStatus('Preencha o seu nome.', document.getElementById('lf-nome')); return false; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { flashStatus('E-mail inválido.', document.getElementById('lf-email')); return false; }
-    if (telefone.replace(/\D/g, '').length < 10) { flashStatus('Telefone inválido.', telInput); return false; }
+    if (telefone.charAt(0) === '+') {
+      /* modo internacional: +código do país + número de 8-15 dígitos */
+      if (!normalizeIntlPhone(telefone)) { flashStatus('Telefone internacional inválido. Formato: +351 912345678', telInput); return false; }
+    } else if (telefone.replace(/\D/g, '').length < 10) { flashStatus('Telefone inválido.', telInput); return false; }
     if (!answers.eventos) { flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".', leadForm.querySelector('.qz-radio-row')); return false; }
     return true;
   }
@@ -433,7 +476,7 @@ if (leadForm) {
   function capturarLead() {
     const nome = document.getElementById('lf-nome').value.trim();
     const email = document.getElementById('lf-email').value.trim().toLowerCase();
-    const whatsapp = formatWhatsappE164BR(document.getElementById('lf-telefone').value.trim());
+    const whatsapp = formatWhatsappE164(document.getElementById('lf-telefone').value.trim());
     if (leadCapturado && leadCapturado.email === email && leadCapturado.whatsapp === whatsapp) return;
 
     const submissionId = generateSubmissionId();
