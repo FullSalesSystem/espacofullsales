@@ -687,6 +687,16 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   color: var(--text-dim);
   margin: 0 0 18px;
 }
+.planta-cue-sub {
+  font-size: .98rem;
+  color: var(--text-mute);
+  margin: -6px 0 20px;
+}
+
+/* Seção Diárias (reaproveita .section-head e o grid .reasons) */
+.diarias-head h2 { margin-bottom: .5em; }
+.diarias-intro { margin: 0; }
+.diarias-grid { margin-bottom: 8px; }
 
 /* Lightbox da planta */
 .planta-lightbox {
