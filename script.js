@@ -272,6 +272,17 @@ function postLeadToApi(payload) {
 
 // Lead form modal -> WhatsApp
 const WHATSAPP_NUMBER = '5511910458564';
+
+/* Segundo destino do lead (dual-write): API FSS Evento.
+   Só dispara no submit final (não na fase 1) — a spec deles é single-shot.
+   Falha não bloqueia o fluxo: nosso backend (Supabase + GHL) segue como fonte primária. */
+const FSS_EVENTO_API = 'https://evento.fullsalessystem.com.br/api/leads';
+const CARGO_TO_PAPEL = {
+  'dono-evento': 'dono_evento',
+  agencia: 'agencia',
+  assessoria: 'assessor_eventos',
+  outro: 'outro',
+};
 const leadModal = document.getElementById('lead-modal');
 const leadForm = document.getElementById('lead-form');
 
@@ -533,6 +544,25 @@ if (leadForm) {
           email: leadCapturado.email,
           whatsapp: leadCapturado.whatsapp,
           instagram,
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (_) {}
+
+    // Dual-write: dispara pra API FSS Evento em paralelo.
+    // Falha silenciosa — nosso backend já capturou o lead na fase 1.
+    try {
+      const hpEl = leadForm.querySelector('input[name="_hp"]');
+      fetch(FSS_EVENTO_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          papel: CARGO_TO_PAPEL[answers.cargo] || 'outro',
+          nome,
+          email,
+          telefone: leadCapturado.whatsapp,
+          instagram,
+          _hp: hpEl ? hpEl.value : '',
         }),
         keepalive: true,
       }).catch(() => {});
