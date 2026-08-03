@@ -507,6 +507,11 @@
       </div>
 
       <form class="qz-form" id="lead-form" novalidate>
+        <!-- Honeypot anti-bot (API FSS Evento) — nunca visível, jamais display:none -->
+        <input type="text" name="_hp" tabindex="-1" aria-hidden="true"
+               autocomplete="off" value=""
+               style="position:absolute;opacity:0;height:0;width:0;pointer-events:none;" />
+
         <!-- STEP 1: PERFIL -->
         <section class="qz-step" data-step="1" aria-labelledby="qz-title-1">
           <h2 class="qz-title" id="qz-title-1">Qual é o seu papel no evento?</h2>
