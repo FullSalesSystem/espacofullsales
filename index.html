@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <!-- Meta Pixel: stub do fbq com injecao de eventID (CAPI).
+       O GTM-MK7SRXJ9 dispara Lead e Lead_qualificado_FAQ_06 nesta pagina SEM
+       Event ID, e o /api/lead manda os mesmos eventos pela Conversions API com
+       event_id = submission_id. Pra Meta deduplicar, este stub anexa
+       {eventID: window.__fssEventId} a toda chamada track/trackSingle feita sem
+       opcoes enquanto o id estiver setado (script.js seta antes do push no
+       dataLayer). init e PageView continuam por conta do GTM. -->
+  <script>
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){
+    var a=Array.prototype.slice.call(arguments),m=a[0],
+        i=(m==='track'||m==='trackCustom')?3:((m==='trackSingle'||m==='trackSingleCustom')?4:-1);
+    if(i>0&&f.__fssEventId&&a.length<=i){a[i-1]=a[i-1]||{};a[i]={eventID:f.__fssEventId};}
+    n.callMethod?n.callMethod.apply(n,a):n.queue.push(a)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
+  t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  </script>
   <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],

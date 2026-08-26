@@ -494,6 +494,11 @@ if (leadForm) {
     const submittedAt = new Date().toISOString();
     leadCapturado = { submission_id: submissionId, submitted_at: submittedAt, email, whatsapp };
 
+    /* eventID dos disparos Meta que o GTM faz a partir deste push (ver stub
+       do fbq no index.html) = o submission_id que vai pro /api/lead, que manda
+       os mesmos eventos pela Conversions API. */
+    window.__fssEventId = submissionId;
+
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'lead_form_submit',

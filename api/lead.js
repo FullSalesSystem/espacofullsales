@@ -444,6 +444,104 @@ async function createOpportunityInEventos(ghlBaseUrl, pitToken, locationId, cont
   return data;
 }
 
+/* ===========================================================================
+   Meta Conversions API (CAPI) — espelho server-side do pixel.
+
+   Manda pro Meta os MESMOS eventos que o navegador dispara neste funil, com o
+   MESMO event_id (= submission_id). A Meta deduplica navegador x servidor por
+   (event_name, event_id) em 48h, entao o volume nao muda: o que muda e a
+   qualidade da correspondencia (e-mail/telefone/nome com hash + IP + UA +
+   fbp/fbc) e a resiliencia (bloqueador, ITP, aba fechada antes do fbq).
+
+   Credencial: META_CAPI_TOKEN (env) ou ./capi.json ao lado do handler
+   (Passenger no cPanel nao tem env editavel por FTP). Sem token => no-op.
+   Nunca derruba o lead: erro so vai pro log. META_TEST_EVENT_CODE (env)
+   manda pro "Testar eventos" do Events Manager sem contar de verdade.
+   =========================================================================== */
+const crypto = require('crypto');
+const META_PIXEL_ID = process.env.META_PIXEL_ID || '288404690470754';
+
+function metaCapiToken() {
+  if (process.env.META_CAPI_TOKEN) return process.env.META_CAPI_TOKEN;
+  try { return require('./capi.json').token || ''; } catch (_) { return ''; }
+}
+
+function metaHash(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return v ? crypto.createHash('sha256').update(v).digest('hex') : null;
+}
+
+function readReqCookie(req, name) {
+  const cookie = String((req.headers && req.headers.cookie) || '');
+  const m = cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
+/* user    = { nome, email, telefone, fbp, fbc, fbclid, url }
+   eventos = [{ name, id, custom }] — todos vao numa unica chamada.
+   Retorna quantos eventos a Meta aceitou (0 = sem token ou falha). */
+async function metaCapi(req, user, eventos) {
+  const token = metaCapiToken();
+  if (!token || !eventos.length) return 0;
+
+  const userData = {};
+  const em = metaHash(user.email);
+  if (em) userData.em = [em];
+  const fone = String(user.telefone || '').replace(/\D/g, '');
+  if (fone) userData.ph = [metaHash(fone)];
+  const nome = String(user.nome || '').trim().split(/\s+/).filter(Boolean);
+  if (nome[0]) userData.fn = [metaHash(nome[0])];
+  if (nome.length > 1) userData.ln = [metaHash(nome.slice(1).join(' '))];
+  if (fone.startsWith('55')) userData.country = [metaHash('br')];
+  const ip = getClientIp(req);
+  if (ip && ip !== 'unknown') userData.client_ip_address = ip;
+  const ua = req.headers && req.headers['user-agent'];
+  if (ua) userData.client_user_agent = String(ua).slice(0, 512);
+  const fbp = user.fbp || readReqCookie(req, '_fbp');
+  if (fbp) userData.fbp = fbp;
+  const fbc = user.fbc || readReqCookie(req, '_fbc')
+    || (user.fbclid ? 'fb.1.' + Date.now() + '.' + user.fbclid : '');
+  if (fbc) userData.fbc = fbc;
+
+  const now = Math.floor(Date.now() / 1000);
+  const body = {
+    access_token: token,
+    data: eventos.map((ev) => ({
+      event_name: ev.name,
+      event_time: now,
+      event_id: ev.id,
+      action_source: 'website',
+      event_source_url: user.url,
+      user_data: userData,
+      custom_data: ev.custom || {},
+    })),
+  };
+  if (process.env.META_TEST_EVENT_CODE) body.test_event_code = process.env.META_TEST_EVENT_CODE;
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 4000);
+  try {
+    const r = await fetch(`https://graph.facebook.com/v21.0/${META_PIXEL_ID}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const txt = await r.text().catch(() => '');
+    if (!r.ok) {
+      console.error('[capi] rejeitado', { status: r.status, body: txt.slice(0, 300) });
+      return 0;
+    }
+    console.log('[capi] ok', { eventos: eventos.map((e) => e.name).join(','), id: eventos[0].id });
+    return eventos.length;
+  } catch (err) {
+    console.error('[capi] falhou', { message: err && err.message });
+    return 0;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
 
@@ -501,6 +599,17 @@ async function handler(req, res) {
     });
   }
 
+  /* Meta CAPI — o GTM-MK7SRXJ9 dispara Lead + Lead_qualificado_FAQ_06 no
+     pixel a cada lead (evento lead_form_submit). O stub do index.html anexa
+     eventID = submission_id a esses disparos; aqui vao os mesmos dois eventos
+     com o mesmo id, e a Meta deduplica. */
+  const capi = await metaCapi(req, {
+    nome: payload.nome, email: payload.email, telefone: payload.whatsapp, url: payload.page,
+  }, [
+    { name: 'Lead', id: payload.submission_id },
+    { name: 'Lead_qualificado_FAQ_06', id: payload.submission_id },
+  ]);
+
   try {
     const classificacao = classifyLead();
     const { response, data } = await sendToHighLevel(ghlBaseUrl, pitToken, locationId, payload);
@@ -545,7 +654,7 @@ async function handler(req, res) {
       }
     }
 
-    return json(res, 202, { ok: true, classificacao });
+    return json(res, 202, { ok: true, classificacao, capi });
   } catch (_) {
     return json(res, 502, { error: 'upstream_unreachable' });
   }
