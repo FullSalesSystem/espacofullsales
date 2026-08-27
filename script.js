@@ -270,8 +270,7 @@ function postLeadToApi(payload) {
   } catch (_) {}
 }
 
-// Lead form modal -> WhatsApp
-const WHATSAPP_NUMBER = '5511910458564';
+// Lead form modal
 
 /* Segundo destino do lead (dual-write): API FSS Evento.
    Só dispara no submit final (não na fase 1) — a spec deles é single-shot.
@@ -329,7 +328,6 @@ if (leadForm) {
   const resultEl = document.getElementById('lead-result');
   const resultTitle = document.getElementById('lead-result-title');
   const resultMsg = document.getElementById('lead-result-msg');
-  const resultWa = document.getElementById('lead-result-wa');
   const fillEl = document.getElementById('qz-fill');
   const counterEl = document.getElementById('qz-counter');
   const stepEls = Array.from(leadForm.querySelectorAll('.qz-step'));
@@ -337,12 +335,6 @@ if (leadForm) {
 
   // Respostas: perfil (botões-radio do step 1) + eventos do step 2
   const answers = { cargo: '', eventos: '' };
-  const CARGO_LABELS = {
-    'dono-evento': 'Dono(a) do evento',
-    agencia: 'Agência',
-    assessoria: 'Assessor(a) de eventos',
-    outro: 'Outro',
-  };
   let currentStep = 1;
 
   function showStep(n) {
@@ -573,43 +565,18 @@ if (leadForm) {
       }).catch(() => {});
     } catch (_) {}
 
-    // Mensagem pré-preenchida que O LEAD envia — pronta, com as respostas
-    // do form pra quem atende, terminando em pergunta fácil de responder
-    const waLines = [
-      'Olá! 🙂',
-      'Acabei de pedir uma cotação pelo site do Espaço Full Sales.',
-      '',
-      `*Nome:* ${nome}`,
-      `*E-mail:* ${email}`,
-      `*Papel no evento:* ${CARGO_LABELS[answers.cargo] || answers.cargo}`,
-      `*Instagram:* ${instagram}`,
-      `*Já faço eventos presenciais:* ${answers.eventos === 'sim' ? 'Sim' : 'Não'}`,
-      '',
-      'Pode me ajudar?',
-    ];
-
     // (o lead já foi capturado na fase 1, ao concluir o contato)
 
-    // Substitui o form pela tela de sucesso
+    // Substitui o form pela tela de sucesso — o lead fica na página,
+    // sem redirect automático; o contato parte do time comercial.
     leadForm.hidden = true;
     if (resultEl) resultEl.hidden = false;
-
-    /* api.whatsapp.com direto: o redirect do wa.me corrompe emoji (🙂 vira �) */
-    const waUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(waLines.join('\n'))}`;
 
     if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
     if (resultMsg) {
       resultMsg.textContent =
-        'Estamos te levando pro WhatsApp com a mensagem pronta. Se não abrir sozinho, toque no botão abaixo.';
+        'Nosso time comercial vai entrar em contato com você em breve para montar a sua cotação.';
     }
-    if (resultWa) {
-      resultWa.href = waUrl;
-      resultWa.hidden = false;
-    }
-
-    /* Redireciona sozinho. O delay dá tempo do GTM disparar o form_submit;
-       o lead já foi pro backend via sendBeacon/keepalive. */
-    setTimeout(() => { window.location.href = waUrl; }, 1200);
   });
 
   // Inicializa no step 1
