@@ -271,6 +271,7 @@ function postLeadToApi(payload) {
 }
 
 // Lead form modal
+const THANK_YOU_URL = 'https://links.fullsalessystem.com/espaco-fullsales-obg';
 
 /* Segundo destino do lead (dual-write): API FSS Evento.
    Só dispara no submit final (não na fase 1) — a spec deles é single-shot.
@@ -567,8 +568,7 @@ if (leadForm) {
 
     // (o lead já foi capturado na fase 1, ao concluir o contato)
 
-    // Substitui o form pela tela de sucesso — o lead fica na página,
-    // sem redirect automático; o contato parte do time comercial.
+    // Substitui o form pela tela de sucesso e depois leva pra página de obrigado
     leadForm.hidden = true;
     if (resultEl) resultEl.hidden = false;
 
@@ -577,6 +577,10 @@ if (leadForm) {
       resultMsg.textContent =
         'Nosso time comercial vai entrar em contato com você em breve para montar a sua cotação.';
     }
+
+    /* Redireciona sozinho. O delay dá tempo do GTM disparar o form_submit;
+       os fetches acima usam keepalive, então seguem mesmo com a navegação. */
+    setTimeout(() => { window.location.href = THANK_YOU_URL; }, 1200);
   });
 
   // Inicializa no step 1
