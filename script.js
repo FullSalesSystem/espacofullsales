@@ -306,6 +306,7 @@ if (leadModal) {
     document.body.classList.add('modal-open');
   };
   const closeModal = () => {
+    if (typeof window.__espacoPartial === 'function') window.__espacoPartial();
     leadModal.removeAttribute('open');
     document.body.classList.remove('modal-open');
   };
@@ -487,6 +488,32 @@ if (leadForm) {
      vai INTEIRO pro backend — abandono no Instagram não perde o lead.
      Fase 2 (no submit): só atualiza contato/linha com o @. */
   let leadCapturado = null;
+
+  /* Abandono com e-mail OU WhatsApp válido (sem ter passado do contato) →
+     /api/lead-partial: contato no GHL com tag form-incompleto, sem card nem
+     vendedor. Dispara ao fechar o modal, a aba ou trocar de app; reenvia só
+     se os dados mudaram. Nunca bloqueia nem mostra erro. */
+  let partialKey = '';
+  window.__espacoPartial = function () {
+    if (leadCapturado) return;
+    const nome = (document.getElementById('lf-nome')?.value || '').trim();
+    const emailRaw = (document.getElementById('lf-email')?.value || '').trim().toLowerCase();
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw) ? emailRaw : '';
+    const whatsapp = formatWhatsappE164((document.getElementById('lf-telefone')?.value || '').trim());
+    if (!email && !whatsapp) return;
+    const key = [nome, email, whatsapp].join('|');
+    if (key === partialKey) return;
+    partialKey = key;
+    const body = JSON.stringify({ nome, email, whatsapp, cargo: answers.cargo || '' });
+    try {
+      if (navigator.sendBeacon && navigator.sendBeacon('/api/lead-partial', new Blob([body], { type: 'application/json' }))) return;
+      fetch('/api/lead-partial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    } catch (_) {}
+  };
+  window.addEventListener('pagehide', window.__espacoPartial);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') window.__espacoPartial();
+  });
 
   function capturarLead() {
     const nome = document.getElementById('lf-nome').value.trim();
