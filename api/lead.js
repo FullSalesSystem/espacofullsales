@@ -1,3 +1,4 @@
+const fssPhone = require('./_fss-phone.js');
 const WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 const ipBucket = new Map();
@@ -97,7 +98,9 @@ function validatePayload(input) {
   if (!/^https?:\/\//.test(payload.page)) return null;
   if (payload.nome.length < 2) return null;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return null;
-  if (!/^\+\d{1,3}\s\d{8,15}$/.test(payload.whatsapp)) return null;
+  const tel = fssPhone(payload.whatsapp);
+  if (!tel.ok) return null;
+  payload.whatsapp = tel.full;
   if (!ALLOWED_CARGOS.has(payload.cargo)) return null;
   if (!ALLOWED_EVENTOS.has(payload.eventos)) return null;
 
@@ -571,7 +574,8 @@ async function handler(req, res) {
       bodyType: typeof req.body,
       keys: rawBody && typeof rawBody === 'object' ? Object.keys(rawBody) : null,
     });
-    return json(res, 400, { error: 'invalid_payload' });
+    const tel = fssPhone(sanitizeText((rawBody || {}).whatsapp, 24));
+    return json(res, 400, tel.ok ? { error: 'invalid_payload' } : { error: 'invalid_payload', message: tel.error });
   }
 
   console.log('[lead] utms received', {

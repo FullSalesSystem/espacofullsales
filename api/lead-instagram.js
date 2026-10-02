@@ -1,3 +1,4 @@
+const fssPhone = require('./_fss-phone.js');
 /* Fase 2 da captura em duas fases do Espaço Full Sales.
    O lead inteiro já foi pro /api/lead ao concluir o WhatsApp (antes da etapa
    do Instagram). Este endpoint recebe só o @ no envio final e:
@@ -154,7 +155,9 @@ async function handler(req, res) {
   if (!/^[a-zA-Z0-9_-]{8,80}$/.test(payload.submission_id)) return json(res, 400, { error: 'invalid_payload' });
   if (!/^\d{4}-\d{2}-\d{2}T/.test(payload.submitted_at)) return json(res, 400, { error: 'invalid_payload' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return json(res, 400, { error: 'invalid_payload' });
-  if (!/^\+\d{1,3}\s\d{8,15}$/.test(payload.whatsapp)) return json(res, 400, { error: 'invalid_payload' });
+  const tel = fssPhone(payload.whatsapp);
+  if (!tel.ok) return json(res, 400, { error: 'invalid_payload', message: tel.error });
+  payload.whatsapp = tel.full;
   if (!payload.instagram) return json(res, 400, { error: 'instagram_required' });
 
   const pitToken = process.env.GHL_PIT_TOKEN;

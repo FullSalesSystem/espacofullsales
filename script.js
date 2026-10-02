@@ -214,44 +214,54 @@ function generateSubmissionId() {
   return 'fap6-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
 }
 
-/* ── Telefone internacional (modo "+") ──────────────────────────
-   Primeiro caractere "+" no campo = modo internacional livre (sem
-   máscara BR). Código do país (ITU): 1 e 7 têm 1 dígito; conjunto
-   fechado de 2 dígitos; o resto tem 3. */
-const CC_1DIGIT = new Set(['1', '7']);
-const CC_2DIGIT = new Set([
-  '20', '27', '30', '31', '32', '33', '34', '36', '39',
-  '40', '41', '43', '44', '45', '46', '47', '48', '49',
-  '51', '52', '53', '54', '55', '56', '57', '58',
-  '60', '61', '62', '63', '64', '65', '66',
-  '81', '82', '84', '86',
-  '90', '91', '92', '93', '94', '95', '98',
-]);
+/* fss-phone — regra ÚNICA de telefone/WhatsApp dos funis FSS (v1, 2026-10-02).
+   Fonte canônica: ~/fss-phone/fss-phone.js (gêmeo PHP: fss-phone.php).
+   Cada funil leva uma CÓPIA desta função (front e API) — mudou aqui, muda lá.
 
-/* "+351 912345678" | "+351912345678" -> "+351 912345678"; null se inválido
-   (número sem o código do país precisa ter 8-15 dígitos). */
-function normalizeIntlPhone(raw) {
-  const v = String(raw || '').trim();
-  if (v.charAt(0) !== '+' || !/^\+[\d\s]+$/.test(v)) return null;
-  const digits = v.slice(1).replace(/\D/g, '');
-  let cc;
-  if (CC_1DIGIT.has(digits.slice(0, 1))) cc = digits.slice(0, 1);
-  else if (CC_2DIGIT.has(digits.slice(0, 2))) cc = digits.slice(0, 2);
-  else cc = digits.slice(0, 3);
-  const num = digits.slice(cc.length);
-  if (!cc || num.length < 8 || num.length > 15) return null;
-  return `+${cc} ${num}`;
+   fssPhone(raw, cc) → { ok:true, cc, num, full:'+CC NUM', e164 } | { ok:false, error }
+   - raw sem "+": Brasil (ou o `cc` do select de país, se vier ≠ 55).
+   - raw com "+": internacional; "+55" volta pra regra BR.
+   BR: tira 0 e 55 da frente, exige DDD real + celular de 11 dígitos começando com 9,
+   recusa número de mentira (88888888, 12345678...). */
+var FSS_DDD = '11 12 13 14 15 16 17 18 19 21 22 24 27 28 31 32 33 34 35 37 38 41 42 43 44 45 46 47 48 49 51 53 54 55 61 62 63 64 65 66 67 68 69 71 73 74 75 77 79 81 82 83 84 85 86 87 88 89 91 92 93 94 95 96 97 98 99';
+var FSS_CC2 = ' 20 27 30 31 32 33 34 36 39 40 41 43 44 45 46 47 48 49 51 52 53 54 55 56 57 58 60 61 62 63 64 65 66 81 82 84 86 90 91 92 93 94 95 98 ';
+/* tamanho do número nacional nos países que mais aparecem; resto: 7-12 */
+var FSS_LEN = { '1': [10], '351': [9], '34': [9], '33': [9], '39': [9, 10], '44': [10], '49': [10, 11], '41': [9], '353': [9], '54': [10, 11], '52': [10], '56': [9], '57': [10], '51': [9], '595': [9], '598': [8], '591': [8], '244': [9], '258': [9], '61': [9], '81': [9, 10] };
+
+function fssPhone(raw, cc) {
+  var s = String(raw == null ? '' : raw).trim();
+  var d = s.replace(/\D/g, '');
+  var BAD = 'Confira o número: DDD + celular com 9. Ex.: (11) 9XXXX-XXXX';
+  if (!d) return { ok: false, error: 'Informe seu WhatsApp com DDD.' };
+  if (s.charAt(0) === '+' || (cc && String(cc) !== '55')) {
+    if (s.charAt(0) !== '+') d = String(cc).replace(/\D/g, '') + d.replace(/^0+/, '');
+    if (d.slice(0, 2) === '55') { s = d.slice(2); d = s; }
+    else {
+      var c = d.charAt(0) === '1' || d.charAt(0) === '7' ? d.slice(0, 1)
+        : FSS_CC2.indexOf(' ' + d.slice(0, 2) + ' ') >= 0 ? d.slice(0, 2) : d.slice(0, 3);
+      var n = d.slice(c.length).replace(/^0/, '');
+      var lens = FSS_LEN[c];
+      var okLen = lens ? lens.indexOf(n.length) >= 0 : n.length >= 7 && n.length <= 12;
+      if (!okLen || /^(\d)\1+$/.test(n) || (c === '1' && !/^[2-9]\d\d[2-9]/.test(n))) return { ok: false, error: 'Número internacional inválido. Use +código do país e o número completo.' };
+      return { ok: true, cc: c, num: n, full: '+' + c + ' ' + n, e164: '+' + c + n };
+    }
+  }
+  d = d.replace(/^0+/, '');
+  if ((d.length === 12 || d.length === 13) && d.slice(0, 2) === '55') d = d.slice(2).replace(/^0+/, '');
+  if (d.length === 10 && FSS_DDD.indexOf(d.slice(0, 2)) >= 0 && /^[6-9]/.test(d.charAt(2))) d = d.slice(0, 2) + '9' + d.slice(2);
+  if (d.length !== 11) return { ok: false, error: BAD };
+  if (FSS_DDD.indexOf(d.slice(0, 2)) < 0 || d.charAt(0) === '0') return { ok: false, error: 'DDD inválido. Confira o código da sua cidade.' };
+  if (d.charAt(2) !== '9') return { ok: false, error: 'Use um celular com WhatsApp: depois do DDD ele começa com 9.' };
+  var t = d.slice(3);
+  if (/^(\d)\1+$/.test(t) || /^(\d)\1{5}/.test(t) || '0123456789012345678'.indexOf(t) >= 0 || '9876543210987654321'.indexOf(t) >= 0)
+    return { ok: false, error: 'Esse número não parece real. Digite o seu WhatsApp.' };
+  return { ok: true, cc: '55', num: d, full: '+55 ' + d, e164: '+55' + d };
 }
 
+/* "+CC NUMERO" normalizado, ou '' quando o número não passa na regra */
 function formatWhatsappE164(telefoneBruto) {
-  /* Back valida `^\+\d{1,3}\s\d{8,15}$`.
-     Modo internacional ("+" primeiro): "+CC NUMERO".
-     Modo BR (padrão, máscara "(11) 99999-9999"): prefixa "+55 ". */
-  const raw = String(telefoneBruto || '').trim();
-  if (raw.charAt(0) === '+') return normalizeIntlPhone(raw) || '';
-  const digits = raw.replace(/\D/g, '');
-  if (digits.length < 10) return '';
-  return `+55 ${digits}`;
+  const r = fssPhone(telefoneBruto);
+  return r.ok ? r.full : '';
 }
 
 function postLeadToApi(payload) {
@@ -432,7 +442,10 @@ if (leadForm) {
       if (clean !== telInput.value) telInput.value = clean;
       return;
     }
-    let v = raw.replace(/\D/g, '').slice(0, 11);
+    /* "0" de operadora e "55" digitado na frente saem antes de cortar em 11 */
+    let v = raw.replace(/\D/g, '').replace(/^0+/, '');
+    if (v.length > 11 && v.slice(0, 2) === '55') v = v.slice(2).replace(/^0+/, '');
+    v = v.slice(0, 11);
     if (v.length > 6) v = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
     else if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
     else if (v.length > 0) v = `(${v}`;
@@ -463,10 +476,8 @@ if (leadForm) {
     if (!answers.cargo) { showStep(1); flashStatus('Selecione o seu papel no evento.'); return false; }
     if (nome.length < 2) { flashStatus('Preencha o seu nome.', document.getElementById('lf-nome')); return false; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { flashStatus('E-mail inválido.', document.getElementById('lf-email')); return false; }
-    if (telefone.charAt(0) === '+') {
-      /* modo internacional: +código do país + número de 8-15 dígitos */
-      if (!normalizeIntlPhone(telefone)) { flashStatus('Telefone internacional inválido. Formato: +351 912345678', telInput); return false; }
-    } else if (telefone.replace(/\D/g, '').length < 10) { flashStatus('Telefone inválido.', telInput); return false; }
+    const tel = fssPhone(telefone);
+    if (!tel.ok) { flashStatus(tel.error, telInput); return false; }
     if (!answers.eventos) { flashStatus('Escolha Sim ou Não em "faz eventos presenciais?".', leadForm.querySelector('.qz-radio-row')); return false; }
     return true;
   }
