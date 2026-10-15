@@ -1,3 +1,4 @@
+const { captureEnabled, capture } = require('./_crm-capture');
 const fssPhone = require('./_fss-phone.js');
 /* Fase 2 da captura em duas fases do Espaço Full Sales.
    O lead inteiro já foi pro /api/lead ao concluir o WhatsApp (antes da etapa
@@ -159,6 +160,11 @@ async function handler(req, res) {
   if (!tel.ok) return json(res, 400, { error: 'invalid_payload', message: tel.error });
   payload.whatsapp = tel.full;
   if (!payload.instagram) return json(res, 400, { error: 'instagram_required' });
+
+  if (captureEnabled()) {
+    try { return json(res, 200, await capture(raw, payload, { phase: 'instagram', ghlCustomFields: [{ id: INSTAGRAM_FIELD_ID, field_value: payload.instagram }], marketing: { table: SUPABASE_TABLE, operation: 'update', row: { instagram: payload.instagram }, match: { email: payload.email, data: payload.submitted_at } } })); }
+    catch (_) { return json(res, 503, { error: 'crm_capture_unavailable' }); }
+  }
 
   const pitToken = process.env.GHL_PIT_TOKEN;
   const locationId = process.env.GHL_LOCATION_ID;

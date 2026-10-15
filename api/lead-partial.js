@@ -1,4 +1,6 @@
+const { captureEnabled, capture } = require('./_crm-capture');
 const fssPhone = require('./_fss-phone.js');
+const { randomUUID } = require('node:crypto');
 /* Abandono do formulário com e-mail OU WhatsApp válido → contato no GHL com a
    tag 'form-incompleto' (sem card, sem trigger, sem vendedor). Quem completa
    depois entra pelo /api/lead normal: o upsert de lá troca o conjunto de tags
@@ -47,7 +49,7 @@ async function ghl(method, path, body) {
 async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
   if (isRateLimited(req)) return json(res, 429, { error: 'too_many_requests' });
-  if (!process.env.GHL_PIT_TOKEN || !process.env.GHL_LOCATION_ID) return json(res, 500, { error: 'server_not_configured' });
+  if (!captureEnabled() && (!process.env.GHL_PIT_TOKEN || !process.env.GHL_LOCATION_ID)) return json(res, 500, { error: 'server_not_configured' });
 
   let raw = req.body; /* sendBeacon chega como string/Buffer em algumas runtimes */
   if (raw && Buffer.isBuffer(raw)) raw = raw.toString('utf8');
@@ -61,6 +63,15 @@ async function handler(req, res) {
   const tel = fssPhone(clean(raw.whatsapp, 32));
   const phone = tel.ok ? tel.e164 : '';
   if (!email && !phone) return json(res, 204, {});
+
+  if (captureEnabled()) {
+    try {
+      // shortcut: cached partial pages lack identity; use one per request until those pages retire.
+      const legacySubmission = ['submission_id','event_id','submitted_at','ts'].every(key => !Object.hasOwn(raw,key)) ? { id: 'legacy_partial_'+randomUUID(), at: new Date().toISOString() } : undefined;
+      const result = await capture(raw, { nome, email, whatsapp: phone }, { phase: 'partial', legacySubmission, ghlTags: { add: TAGS_INCOMPLETO, retrigger: [] } });
+      res.statusCode = 200; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(result));
+    } catch (_) { res.statusCode = 503; return res.end(JSON.stringify({ error: 'crm_capture_unavailable' })); }
+  }
 
   /* upsert SEM `tags` (substituiria o conjunto do contato) e sem campo vazio */
   const body = { locationId: process.env.GHL_LOCATION_ID };
