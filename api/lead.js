@@ -1,3 +1,4 @@
+const { captureEnabled, capture } = require('./_crm-capture');
 const fssPhone = require('./_fss-phone.js');
 const WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
@@ -151,8 +152,7 @@ function buildGhlPayload(payload, locationId) {
   return body;
 }
 
-async function sendToSupabase(supabaseUrl, supabaseKey, payload) {
-  const endpoint = `${supabaseUrl.replace(/\/+$/, '')}/rest/v1/${encodeURIComponent(SUPABASE_TABLE)}`;
+function buildMarketingRow(payload) {
   const row = {
     nome: payload.nome,
     email: payload.email,
@@ -177,6 +177,13 @@ async function sendToSupabase(supabaseUrl, supabaseKey, payload) {
      perder o lead enquanto a migration não roda */
   if (payload.instagram) row.instagram = payload.instagram;
   if (payload.eventos) row.eventos = payload.eventos;
+
+  return row;
+}
+
+async function sendToSupabase(supabaseUrl, supabaseKey, payload) {
+  const endpoint = `${supabaseUrl.replace(/\/+$/, '')}/rest/v1/${encodeURIComponent(SUPABASE_TABLE)}`;
+  const row = buildMarketingRow(payload);
 
   const insert = (body) => fetch(endpoint, {
     method: 'POST',
@@ -545,6 +552,16 @@ async function metaCapi(req, user, eventos) {
   }
 }
 
+async function sendCapturedMeta(req, payload) {
+  if (payload.utm_source === 'e2e-check' || /\[TESTE/i.test(payload.nome)) return;
+  return await metaCapi(req, {
+    nome: payload.nome, email: payload.email, telefone: payload.whatsapp, url: payload.page,
+  }, [
+    { name: 'Lead', id: payload.submission_id },
+    { name: 'Lead_qualificado_FAQ_06', id: payload.submission_id },
+  ]);
+}
+
 async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
 
@@ -555,7 +572,7 @@ async function handler(req, res) {
   const locationId = process.env.GHL_LOCATION_ID;
   const ghlBaseUrl = process.env.GHL_BASE_URL || 'https://services.leadconnectorhq.com';
   const ghlUserId = process.env.GHL_USER_ID || '';
-  if (!pitToken || !locationId) return json(res, 500, { error: 'server_not_configured' });
+  if (!captureEnabled() && (!pitToken || !locationId)) return json(res, 500, { error: 'server_not_configured' });
 
   /* req.body normalmente já vem parseado pelo Vercel quando o
      Content-Type é application/json. Mas sendBeacon (usado para
@@ -576,6 +593,18 @@ async function handler(req, res) {
     });
     const tel = fssPhone(sanitizeText((rawBody || {}).whatsapp, 24));
     return json(res, 400, tel.ok ? { error: 'invalid_payload' } : { error: 'invalid_payload', message: tel.error });
+  }
+
+  if (captureEnabled()) {
+    try {
+      const options = { phase: 'complete' };
+      options.marketing = { table: SUPABASE_TABLE, row: buildMarketingRow(payload), operation: 'insert' };
+      options.ghlTags = { add: buildGhlPayload(payload, '').tags, retrigger: [] };
+      options.ghlCustomFields = buildGhlPayload(payload, '').customFields || [];
+      const result = await capture(rawBody, payload, options);
+      await sendCapturedMeta(req, payload);
+      return json(res, 200, result);
+    } catch (_) { return json(res, 503, { error: 'crm_capture_unavailable' }); }
   }
 
   console.log('[lead] utms received', {
@@ -607,12 +636,7 @@ async function handler(req, res) {
      pixel a cada lead (evento lead_form_submit). O stub do index.html anexa
      eventID = submission_id a esses disparos; aqui vao os mesmos dois eventos
      com o mesmo id, e a Meta deduplica. */
-  const capi = await metaCapi(req, {
-    nome: payload.nome, email: payload.email, telefone: payload.whatsapp, url: payload.page,
-  }, [
-    { name: 'Lead', id: payload.submission_id },
-    { name: 'Lead_qualificado_FAQ_06', id: payload.submission_id },
-  ]);
+  const capi = await sendCapturedMeta(req, payload);
 
   try {
     const classificacao = classifyLead();

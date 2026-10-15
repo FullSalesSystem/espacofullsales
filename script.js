@@ -265,19 +265,8 @@ function formatWhatsappE164(telefoneBruto) {
 }
 
 function postLeadToApi(payload) {
-  const body = JSON.stringify(payload);
-  try {
-    const blob = new Blob([body], { type: 'application/json' });
-    if (navigator.sendBeacon && navigator.sendBeacon('/api/lead', blob)) return;
-  } catch (_) { /* cai pro fetch */ }
-  try {
-    fetch('/api/lead', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-      keepalive: true,
-    }).catch(() => {});
-  } catch (_) {}
+  return fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true })
+    .then(async response => { const result = await response.json(); return response.ok && (result.ok === true || result.received === true); }).catch(() => false);
 }
 
 // Lead form modal
@@ -487,7 +476,9 @@ if (leadForm) {
      Fase 1: ao concluir o contato (antes da etapa do Instagram) o lead
      vai INTEIRO pro backend — abandono no Instagram não perde o lead.
      Fase 2 (no submit): só atualiza contato/linha com o @. */
+  const captureAttempt = { id: generateSubmissionId(), at: new Date().toISOString() };
   let leadCapturado = null;
+  let leadReceipt = Promise.resolve(false);
 
   /* Abandono com e-mail OU WhatsApp válido (sem ter passado do contato) →
      /api/lead-partial: contato no GHL com tag form-incompleto, sem card nem
@@ -504,7 +495,7 @@ if (leadForm) {
     const key = [nome, email, whatsapp].join('|');
     if (key === partialKey) return;
     partialKey = key;
-    const body = JSON.stringify({ nome, email, whatsapp, cargo: answers.cargo || '' });
+    const body = JSON.stringify({ submission_id: captureAttempt.id, submitted_at: captureAttempt.at, page: location.href, nome, email, whatsapp, cargo: answers.cargo || '' });
     try {
       if (navigator.sendBeacon && navigator.sendBeacon('/api/lead-partial', new Blob([body], { type: 'application/json' }))) return;
       fetch('/api/lead-partial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
@@ -521,8 +512,8 @@ if (leadForm) {
     const whatsapp = formatWhatsappE164(document.getElementById('lf-telefone').value.trim());
     if (leadCapturado && leadCapturado.email === email && leadCapturado.whatsapp === whatsapp) return;
 
-    const submissionId = generateSubmissionId();
-    const submittedAt = new Date().toISOString();
+    const submissionId = captureAttempt.id;
+    const submittedAt = captureAttempt.at;
     leadCapturado = { submission_id: submissionId, submitted_at: submittedAt, email, whatsapp };
 
     /* eventID dos disparos Meta que o GTM faz a partir deste push (ver stub
@@ -538,7 +529,7 @@ if (leadForm) {
       eventos_presenciais: answers.eventos,
     });
 
-    postLeadToApi({
+    leadReceipt = postLeadToApi({
       submission_id: submissionId,
       submitted_at: submittedAt,
       page: location.href,
@@ -552,73 +543,75 @@ if (leadForm) {
     });
   }
 
-  leadForm.addEventListener('submit', (e) => {
+  let submitting = false;
+  leadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
-    const nome = document.getElementById('lf-nome').value.trim();
-    const email = document.getElementById('lf-email').value.trim().toLowerCase();
-
-    // Segurança: se por algum caminho o lead não foi capturado no passo 2, volta lá
-    if (!leadCapturado) { showStep(2); return flashStatus('Confirme seus dados de contato.'); }
-
-    const instagram = (igInput?.value || '').trim();
-    if (!instagram) return flashStatus('Informe o @ do Instagram.', igInput);
-
-    trackStep('instagram', 'preenchido');
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({ event: 'lead_instagram_complete' });
-
-    // Fase 2 — atualiza o contato no GHL e a linha no Supabase com o @
+    if (submitting || leadForm.hidden) return;
+    submitting = true;
     try {
-      fetch('/api/lead-instagram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          submission_id: leadCapturado.submission_id,
-          submitted_at: leadCapturado.submitted_at,
-          page: location.href,
-          email: leadCapturado.email,
-          whatsapp: leadCapturado.whatsapp,
-          instagram,
-        }),
-        keepalive: true,
-      }).catch(() => {});
-    } catch (_) {}
 
-    // Dual-write: dispara pra API FSS Evento em paralelo.
-    // Falha silenciosa — nosso backend já capturou o lead na fase 1.
-    try {
-      const hpEl = leadForm.querySelector('input[name="_hp"]');
-      fetch(FSS_EVENTO_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          papel: CARGO_TO_PAPEL[answers.cargo] || 'outro',
-          nome,
-          email,
-          telefone: leadCapturado.whatsapp,
-          instagram,
-          _hp: hpEl ? hpEl.value : '',
-        }),
-        keepalive: true,
-      }).catch(() => {});
-    } catch (_) {}
 
-    // (o lead já foi capturado na fase 1, ao concluir o contato)
+      const nome = document.getElementById('lf-nome').value.trim();
+      const email = document.getElementById('lf-email').value.trim().toLowerCase();
 
-    // Substitui o form pela tela de sucesso e depois leva pra página de obrigado
-    leadForm.hidden = true;
-    if (resultEl) resultEl.hidden = false;
+      // Segurança: se por algum caminho o lead não foi capturado no passo 2, volta lá
+      if (!leadCapturado) { showStep(2); return flashStatus('Confirme seus dados de contato.'); }
 
-    if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
-    if (resultMsg) {
-      resultMsg.textContent =
-        'Nosso time comercial vai entrar em contato com você em breve para montar a sua cotação.';
-    }
+      const instagram = (igInput?.value || '').trim();
+      if (!instagram) return flashStatus('Informe o @ do Instagram.', igInput);
 
-    /* Redireciona sozinho. O delay dá tempo do GTM disparar o form_submit;
-       os fetches acima usam keepalive, então seguem mesmo com a navegação. */
-    setTimeout(() => { window.location.href = THANK_YOU_URL; }, 1200);
+      trackStep('instagram', 'preenchido');
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ event: 'lead_instagram_complete' });
+
+      if (!(await leadReceipt)) {
+        leadCapturado = null; capturarLead();
+        if (!(await leadReceipt)) return flashStatus('Não conseguimos confirmar seu cadastro. Tente enviar novamente.');
+      }
+      try {
+        const response = await fetch('/api/lead-instagram', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ submission_id: leadCapturado.submission_id, submitted_at: leadCapturado.submitted_at, page: location.href, email: leadCapturado.email, whatsapp: leadCapturado.whatsapp, instagram }), keepalive: true,
+        });
+        const receipt = await response.json().catch(() => ({}));
+        if (!response.ok || !(receipt.ok === true || receipt.received === true)) return flashStatus('Não conseguimos salvar o Instagram. Tente enviar novamente.');
+      } catch (_) { return flashStatus('Não conseguimos confirmar seu cadastro. Tente enviar novamente.'); }
+
+      // Dual-write: dispara pra API FSS Evento em paralelo.
+      // Falha silenciosa — nosso backend já capturou o lead na fase 1.
+      try {
+        const hpEl = leadForm.querySelector('input[name="_hp"]');
+        fetch(FSS_EVENTO_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            papel: CARGO_TO_PAPEL[answers.cargo] || 'outro',
+            nome,
+            email,
+            telefone: leadCapturado.whatsapp,
+            instagram,
+            _hp: hpEl ? hpEl.value : '',
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch (_) {}
+
+      // (o lead já foi capturado na fase 1, ao concluir o contato)
+
+      // Substitui o form pela tela de sucesso e depois leva pra página de obrigado
+      leadForm.hidden = true;
+      if (resultEl) resultEl.hidden = false;
+
+      if (resultTitle) resultTitle.textContent = 'Recebemos as suas respostas!';
+      if (resultMsg) {
+        resultMsg.textContent =
+          'Nosso time comercial vai entrar em contato com você em breve para montar a sua cotação.';
+      }
+
+      /* Redireciona sozinho. O delay dá tempo do GTM disparar o form_submit;
+         os fetches acima usam keepalive, então seguem mesmo com a navegação. */
+      setTimeout(() => { window.location.href = THANK_YOU_URL; }, 1200);
+    } finally { submitting = false; }
   });
 
   // Inicializa no step 1
