@@ -270,7 +270,11 @@ function postLeadToApi(payload) {
 }
 
 // Lead form modal
-const THANK_YOU_URL = 'https://links.fullsalessystem.com/espaco-fullsales-obg';
+/* Pós-envio vai direto pro WhatsApp do Vitor Bueno (16/10/2026). O link encurtado
+   antigo (links.fullsalessystem.com/espaco-fullsales-obg) caía no WhatsApp da Iza. */
+const THANK_YOU_URL = 'https://wa.me/5511920853945?text=' + encodeURIComponent(
+  'Oi, Vitor! Acabei de preencher o formulário do Espaço Full Sales e quero saber mais sobre o espaço pro meu evento.'
+);
 
 /* Segundo destino do lead (dual-write): API FSS Evento.
    Só dispara no submit final (não na fase 1) — a spec deles é single-shot.

@@ -10,7 +10,7 @@ Sócios, empresários e líderes comerciais (30-55) que organizam eventos de con
 
 ## Product Purpose
 
-Landing page do Espaço Full Sales (espacofullsales.com.br), venue de 184 lugares no Sky Corporate (Vila Olímpia, SP). O site existe para gerar leads qualificados de locação: mostrar o espaço (tour por fotos reais), listar diferenciais e converter no formulário qualificatório de 4 passos (funil FAP06 → Supabase + GHL, round-robin comercial). Sucesso = lead qualificado concluindo o formulário; ao concluir, o lead vê a tela de sucesso e é redirecionado para a página de obrigado (links.fullsalessystem.com/espaco-fullsales-obg); o contato parte do time comercial.
+Landing page do Espaço Full Sales (espacofullsales.com.br), venue de 184 lugares no Sky Corporate (Vila Olímpia, SP). O site existe para gerar leads qualificados de locação: mostrar o espaço (tour por fotos reais), listar diferenciais e converter no formulário qualificatório de 4 passos (funil FAP06 → Supabase + GHL, round-robin comercial). Sucesso = lead qualificado concluindo o formulário; ao concluir, o lead vê a tela de sucesso e é redirecionado para o WhatsApp do Vitor Bueno (+55 11 92085-3945, desde 16/10/2026; antes ia pro link encurtado espaco-fullsales-obg, que caía na Iza); o contato parte do time comercial.
 
 ## Brand Personality
 
