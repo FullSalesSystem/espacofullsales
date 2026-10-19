@@ -533,6 +533,7 @@ if (leadForm) {
       eventos_presenciais: answers.eventos,
     });
 
+    const tentativa = leadCapturado;
     leadReceipt = postLeadToApi({
       submission_id: submissionId,
       submitted_at: submittedAt,
@@ -544,6 +545,10 @@ if (leadForm) {
       eventos: answers.eventos,
       instagram: '',
       ...getStoredUtms(),
+    }).then(ok => {
+      /* falhou: libera o beacon de parcial (abandono depois de um 503 não pode sumir) */
+      if (!ok && leadCapturado === tentativa) leadCapturado = null;
+      return ok;
     });
   }
 
@@ -559,6 +564,7 @@ if (leadForm) {
       const email = document.getElementById('lf-email').value.trim().toLowerCase();
 
       // Segurança: se por algum caminho o lead não foi capturado no passo 2, volta lá
+      if (!leadCapturado && validarContato()) capturarLead(); /* captura anterior falhou: reenvia com a mesma chave */
       if (!leadCapturado) { showStep(2); return flashStatus('Confirme seus dados de contato.'); }
 
       const instagram = (igInput?.value || '').trim();
