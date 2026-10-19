@@ -609,7 +609,8 @@ async function handler(req, res) {
     } catch (err) {
       console.error('[lead] capture falhou', { submission_id: payload.submission_id, message: err && err.message });
       await capi;
-      return json(res, 503, { error: 'crm_capture_unavailable' });
+      /* crm_capture_unavailable = nada gravado (o front reabre o parcial); uncertain = pode ter gravado */
+      return json(res, 503, { error: err && err.message === 'capture_uncertain' ? 'crm_capture_uncertain' : 'crm_capture_unavailable' });
     }
   }
 

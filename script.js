@@ -266,7 +266,12 @@ function formatWhatsappE164(telefoneBruto) {
 
 function postLeadToApi(payload) {
   return fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true })
-    .then(async response => { const result = await response.json(); return response.ok && (result.ok === true || result.received === true); }).catch(() => false);
+    .then(async response => {
+      const result = await response.json().catch(() => ({}));
+      /* down = falha CERTA (o servidor disse que nada foi gravado). Rede caída, 504 em HTML etc.
+         são ambíguos: o lead pode já estar gravado, então não reabrem o beacon de parcial. */
+      return { ok: response.ok && (result.ok === true || result.received === true), down: response.status === 503 && result.error === 'crm_capture_unavailable' };
+    }).catch(() => ({ ok: false, down: false }));
 }
 
 // Lead form modal
@@ -545,10 +550,10 @@ if (leadForm) {
       eventos: answers.eventos,
       instagram: '',
       ...getStoredUtms(),
-    }).then(ok => {
-      /* falhou: libera o beacon de parcial (abandono depois de um 503 não pode sumir) */
-      if (!ok && leadCapturado === tentativa) leadCapturado = null;
-      return ok;
+    }).then(r => {
+      /* só a falha certa libera o beacon de parcial; na ambígua o submit reenvia com a mesma chave */
+      if (r.down && leadCapturado === tentativa) leadCapturado = null;
+      return r.ok;
     });
   }
 
