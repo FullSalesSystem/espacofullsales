@@ -162,8 +162,11 @@ async function handler(req, res) {
   if (!payload.instagram) return json(res, 400, { error: 'instagram_required' });
 
   if (captureEnabled()) {
-    try { return json(res, 200, await capture(raw, payload, { phase: 'instagram', ghlCustomFields: [{ id: INSTAGRAM_FIELD_ID, field_value: payload.instagram }], marketing: { table: SUPABASE_TABLE, operation: 'update', row: { instagram: payload.instagram }, match: { email: payload.email, data: payload.submitted_at } } })); }
-    catch (_) { return json(res, 503, { error: 'crm_capture_unavailable' }); }
+    try { const result = await capture(raw, payload, { phase: 'instagram', source: 'espaco', ghlCustomFields: [{ id: INSTAGRAM_FIELD_ID, field_value: payload.instagram }], marketing: { table: SUPABASE_TABLE, operation: 'update', row: { instagram: payload.instagram }, match: { email: payload.email, data: payload.submitted_at } } }); return json(res, result.queued ? 202 : 200, result); }
+    catch (err) {
+      console.error('[lead-instagram] capture falhou', { submission_id: payload.submission_id, message: err && err.message });
+      return json(res, 503, { error: 'crm_capture_unavailable' });
+    }
   }
 
   const pitToken = process.env.GHL_PIT_TOKEN;

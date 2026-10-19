@@ -51,13 +51,43 @@ function buildCapture(raw, payload, options = {}) {
   if (options.ghlCustomFields?.length) attribution.extra.ghl_custom_fields = options.ghlCustomFields;
   return { schema_version: 1, submission_id: `${base}:${phase}:${hash}`, submitted_at: new Date(stamp).toISOString(), contact, answers, qualification, attribution };
 }
+// Contrato "Supabase primeiro" (crm-pre-vendas-fss/entrada-leads-1910/CONTRATO-SUPABASE-PRIMEIRO.md).
+// O corpo é montado UMA vez; o mesmo objeto vai pro lead_capturas e pro CRM. O reconciliador do CRM
+// repete o que ficar pending, então falha do CRM com o lead já salvo responde 202 queued.
+function supabaseInsert(path, row, prefer) {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!key) return Promise.reject(new Error('supabase_not_configured'));
+  const base = (process.env.SUPABASE_URL || 'https://dpqvpedltehnemvtbxle.supabase.co').replace(/\/+$/, '');
+  return fetch(`${base}/rest/v1/${path}`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: prefer }, body: JSON.stringify(row), signal: AbortSignal.timeout(3000), redirect: 'error' })
+    .then(r => { if (!r.ok) throw new Error(`supabase_http_${r.status}`); });
+}
 async function capture(raw, payload, options = {}) {
   const endpoint = options.endpoint !== undefined ? options.endpoint : (options.phase === 'partial' ? process.env.CRM_CAPTURE_PARTIAL_URL : options.phase === 'instagram' ? process.env.CRM_CAPTURE_INSTAGRAM_URL : process.env.CRM_CAPTURE_URL);
-  if (!endpoint || !/^https:\/\//.test(endpoint)) throw new Error('capture_not_configured');
   const body = buildCapture(raw, payload, options);
-  const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': body.submission_id }, body: JSON.stringify(body), signal: AbortSignal.timeout(12000), redirect: 'error' });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || result.received !== true) throw new Error('capture_not_received');
-  return { ok: true, received: true, submission_id: body.submission_id };
+  const key = body.submission_id;
+  const phase = body.attribution.extra.phase;
+  const marketing = body.attribution.extra.marketing;
+  const complete = phase === 'complete' && marketing && marketing.operation === 'insert';
+  if (complete) { // a chave não muda: o hash cobre só answers
+    marketing.row.capture_key = key;
+    marketing.operation = 'upsert';
+    marketing.conflict_key = 'capture_key';
+  }
+  const log = (step, err) => console.error('[capture] ' + step + ' falhou', { submission_id: key, message: err && err.message });
+  // ponytail: Supabase e CRM saem juntos (pior caso 8 s, cabe no maxDuration 10 s). A ordem não importa:
+  // o reconciliador só olha linhas com 3+ min e as duas escritas no Supabase são ignore-duplicates.
+  const saved = supabaseInsert('lead_capturas', { capture_key: key, source: options.source, capture_phase: phase, capture_payload: body }, 'resolution=ignore-duplicates,return=minimal')
+    .then(() => true, err => { log('lead_capturas', err); return false; });
+  const row = complete ? supabaseInsert(`${encodeURIComponent(marketing.table)}?on_conflict=capture_key`, marketing.row, 'resolution=ignore-duplicates,return=minimal').catch(err => log('leads_row', err)) : null;
+  const crm = (async () => {
+    if (!endpoint || !/^https:\/\//.test(endpoint)) throw new Error('capture_not_configured');
+    const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000), redirect: 'error' });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.received !== true) throw new Error(`crm_http_${response.status}`);
+  })().then(() => true, err => { log('crm', err); return false; });
+  const [savedOk, crmOk] = await Promise.all([saved, crm, row]);
+  if (crmOk) return { ok: true, received: true, submission_id: key };
+  if (savedOk) return { ok: true, received: true, queued: true, submission_id: key };
+  throw new Error('capture_not_received');
 }
 module.exports = { captureEnabled, buildCapture, capture };
