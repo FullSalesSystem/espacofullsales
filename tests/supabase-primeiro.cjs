@@ -79,6 +79,13 @@ const raw = { submission_id: 'espaco_fixture_01', submitted_at: '2026-10-19T12:0
   assert.equal(r.statusCode, 200);
   assert.deepEqual(sent.filter(s => s.url.startsWith('https://sb.')).map(s => s.url.split('/rest/v1/')[1]), ['lead_capturas'], 'instagram grava só lead_capturas');
   assert.equal(sent.find(s => s.url.startsWith('https://crm.')).body.attribution.extra.marketing.operation, 'update', 'instagram segue update');
+  // Chave real do 409: só o MESMO rawBody com corpo diferente (gate trocado). Contato corrigido = chave nova
+  // (captura nova no CRM, não 409; comportamento anterior ao branch, dedup é decisão do dono).
+  const { buildCapture } = require('../api/_crm-capture');
+  const k = r => buildCapture(r, r).submission_id;
+  assert.equal(k(raw), k({ ...raw }), 'mesmo rawBody = mesma chave (gate trocado entre tentativas gera 409)');
+  assert.notEqual(k(raw), k({ ...raw, email: 'corrigido@example.com' }), 'e-mail corrigido gera chave nova, não 409');
+  assert.notEqual(k(raw), k({ ...raw, whatsapp: '+55 11934172857' }), 'whatsapp corrigido gera chave nova, não 409');
   // front: só a recusa certa (503 crm_capture_unavailable) reabre o beacon de parcial
   const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '../script.js'), 'utf8');
   const fn = src.slice(src.indexOf('function postLeadToApi'), src.indexOf('// Lead form modal'));
@@ -88,5 +95,5 @@ const raw = { submission_id: 'espaco_fixture_01', submitted_at: '2026-10-19T12:0
   assert.deepEqual(await post(async () => new Response('<html>504</html>', { status: 504 })), { ok: false, down: false });
   assert.deepEqual(await post(async () => { throw new Error('offline'); }), { ok: false, down: false });
   assert.deepEqual(await post(async () => Response.json({ ok: true, received: true, queued: true }, { status: 202 })), { ok: true, down: false });
-  console.log('PASS supabase primeiro: corpo único, linha = marketing.row, 202 queued, 409 = uncertain sem fila, linha [Leads] só após lead_capturas, 503 só com os dois fora, gate CAPTURE_SUPABASE_FIRST, parcial fora da fila');
+  console.log('PASS supabase primeiro: corpo único, linha = marketing.row, 202 queued, 409 = uncertain sem fila (só mesmo rawBody; contato corrigido = chave nova), linha [Leads] só após lead_capturas, 503 só com os dois fora, gate CAPTURE_SUPABASE_FIRST, parcial fora da fila');
 })().catch(e => { process.stderr.write(String(e.stack) + '\n'); process.exitCode = 1; });

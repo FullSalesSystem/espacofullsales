@@ -76,7 +76,7 @@ async function capture(raw, payload, options = {}) {
   const first = supabaseFirst(options.source, phase);
   const marketing = body.attribution.extra.marketing;
   const complete = first && phase === 'complete' && marketing && marketing.operation === 'insert';
-  if (complete) { // a chave não muda: o hash cobre só answers
+  if (complete) { // a chave não muda com isto: o hash cobre answers (= rawBody inteiro, contato incluso), não marketing
     marketing.row.capture_key = key;
     marketing.operation = 'upsert';
     marketing.conflict_key = 'capture_key';
@@ -90,7 +90,9 @@ async function capture(raw, payload, options = {}) {
     .then(() => true, err => { sbUncertain = !/^supabase_(http_(?!50[24]$)\d+|not_configured)$/.test(err.message); log('lead_capturas', err); return false; });
   const row = complete ? saved.then(ok => ok && supabaseInsert(`${encodeURIComponent(marketing.table)}?on_conflict=capture_key`, marketing.row, 'resolution=ignore-duplicates,return=minimal').catch(err => log('leads_row', err))) : null;
   let uncertain = false; // sem resposta HTTP (timeout/rede) ou 500/502/504: o CRM pode ter gravado
-  let conflict = false; // 409 = mesma chave, outro conteúdo (lead corrigiu contato): o CRM já tem a captura
+  let conflict = false; // 409 = mesma chave (mesmo rawBody), outro corpo: ex. gate CAPTURE_SUPABASE_FIRST ou tags trocados
+  // entre tentativas. Lead que corrige e-mail/whatsapp NÃO cai aqui: answers muda, a chave é nova e o CRM
+  // abre outra captura (comportamento anterior ao branch; dedup é decisão do dono, mexe na distribuição).
   const crm = (async () => {
     if (!endpoint || !/^https:\/\//.test(endpoint)) throw new Error('capture_not_configured');
     uncertain = true;
