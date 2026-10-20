@@ -596,15 +596,22 @@ async function handler(req, res) {
   }
 
   if (captureEnabled()) {
+    /* CAPI em paralelo e em try próprio: falha dele nunca vira 503 e o tempo não soma ao do capture */
+    const capi = Promise.resolve().then(() => sendCapturedMeta(req, payload)).catch(err => console.error('[capi] threw', { message: err && err.message }));
     try {
-      const options = { phase: 'complete' };
+      const options = { phase: 'complete', source: 'espaco' };
       options.marketing = { table: SUPABASE_TABLE, row: buildMarketingRow(payload), operation: 'insert' };
       options.ghlTags = { add: buildGhlPayload(payload, '').tags, retrigger: [] };
       options.ghlCustomFields = buildGhlPayload(payload, '').customFields || [];
       const result = await capture(rawBody, payload, options);
-      await sendCapturedMeta(req, payload);
-      return json(res, 200, result);
-    } catch (_) { return json(res, 503, { error: 'crm_capture_unavailable' }); }
+      await capi;
+      return json(res, result.queued ? 202 : 200, result);
+    } catch (err) {
+      console.error('[lead] capture falhou', { submission_id: payload.submission_id, message: err && err.message });
+      await capi;
+      /* crm_capture_unavailable = nada gravado (o front reabre o parcial); uncertain = pode ter gravado */
+      return json(res, 503, { error: err && err.message === 'capture_uncertain' ? 'crm_capture_uncertain' : 'crm_capture_unavailable' });
+    }
   }
 
   console.log('[lead] utms received', {

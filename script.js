@@ -266,7 +266,12 @@ function formatWhatsappE164(telefoneBruto) {
 
 function postLeadToApi(payload) {
   return fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true })
-    .then(async response => { const result = await response.json(); return response.ok && (result.ok === true || result.received === true); }).catch(() => false);
+    .then(async response => {
+      const result = await response.json().catch(() => ({}));
+      /* down = falha CERTA (o servidor disse que nada foi gravado). Rede caída, 504 em HTML etc.
+         são ambíguos: o lead pode já estar gravado, então não reabrem o beacon de parcial. */
+      return { ok: response.ok && (result.ok === true || result.received === true), down: response.status === 503 && result.error === 'crm_capture_unavailable' };
+    }).catch(() => ({ ok: false, down: false }));
 }
 
 // Lead form modal
@@ -533,6 +538,7 @@ if (leadForm) {
       eventos_presenciais: answers.eventos,
     });
 
+    const tentativa = leadCapturado;
     leadReceipt = postLeadToApi({
       submission_id: submissionId,
       submitted_at: submittedAt,
@@ -544,6 +550,10 @@ if (leadForm) {
       eventos: answers.eventos,
       instagram: '',
       ...getStoredUtms(),
+    }).then(r => {
+      /* só a falha certa libera o beacon de parcial; na ambígua o submit reenvia com a mesma chave */
+      if (r.down && leadCapturado === tentativa) leadCapturado = null;
+      return r.ok;
     });
   }
 
@@ -559,6 +569,7 @@ if (leadForm) {
       const email = document.getElementById('lf-email').value.trim().toLowerCase();
 
       // Segurança: se por algum caminho o lead não foi capturado no passo 2, volta lá
+      if (!leadCapturado && validarContato()) capturarLead(); /* captura anterior falhou: reenvia com a mesma chave */
       if (!leadCapturado) { showStep(2); return flashStatus('Confirme seus dados de contato.'); }
 
       const instagram = (igInput?.value || '').trim();

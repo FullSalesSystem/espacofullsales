@@ -68,9 +68,12 @@ async function handler(req, res) {
     try {
       // shortcut: cached partial pages lack identity; use one per request until those pages retire.
       const legacySubmission = ['submission_id','event_id','submitted_at','ts'].every(key => !Object.hasOwn(raw,key)) ? { id: 'legacy_partial_'+randomUUID(), at: new Date().toISOString() } : undefined;
-      const result = await capture(raw, { nome, email, whatsapp: phone }, { phase: 'partial', legacySubmission, ghlTags: { add: TAGS_INCOMPLETO, retrigger: [] } });
-      res.statusCode = 200; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(result));
-    } catch (_) { res.statusCode = 503; return res.end(JSON.stringify({ error: 'crm_capture_unavailable' })); }
+      const result = await capture(raw, { nome, email, whatsapp: phone }, { phase: 'partial', source: 'espaco', legacySubmission, ghlTags: { add: TAGS_INCOMPLETO, retrigger: [] } });
+      return json(res, result.queued ? 202 : 200, result);
+    } catch (err) {
+      console.error('[lead-partial] capture falhou', { submission_id: String(raw.submission_id || ''), message: err && err.message });
+      return json(res, 503, { error: 'crm_capture_unavailable' });
+    }
   }
 
   /* upsert SEM `tags` (substituiria o conjunto do contato) e sem campo vazio */

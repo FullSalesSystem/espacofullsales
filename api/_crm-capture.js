@@ -51,13 +51,63 @@ function buildCapture(raw, payload, options = {}) {
   if (options.ghlCustomFields?.length) attribution.extra.ghl_custom_fields = options.ghlCustomFields;
   return { schema_version: 1, submission_id: `${base}:${phase}:${hash}`, submitted_at: new Date(stamp).toISOString(), contact, answers, qualification, attribution };
 }
+// Contrato "Supabase primeiro" (crm-pre-vendas-fss/entrada-leads-1910/CONTRATO-SUPABASE-PRIMEIRO.md).
+// O corpo é montado UMA vez; o mesmo objeto vai pro lead_capturas e pro CRM. O reconciliador do CRM
+// repete o que ficar pending, então falha do CRM com o lead já salvo responde 202 queued.
+function supabaseInsert(path, row, prefer) {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!key) return Promise.reject(new Error('supabase_not_configured'));
+  const base = (process.env.SUPABASE_URL || 'https://dpqvpedltehnemvtbxle.supabase.co').replace(/\/+$/, '');
+  return fetch(`${base}/rest/v1/${path}`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: prefer }, body: JSON.stringify(row), signal: AbortSignal.timeout(3000), redirect: 'error' })
+    .then(r => { if (!r.ok) throw new Error(`supabase_http_${r.status}`); });
+}
+// Gate igual ao fap01: CAPTURE_SUPABASE_FIRST desligado = comportamento antigo (insert, sem Supabase,
+// CRM fora = erro). Parcial NUNCA vai pro lead_capturas: replay atrasado de parcial depois do complete
+// marcaria form-incompleto num lead já distribuído. Perder parcial com o CRM fora é igual a antes.
+function supabaseFirst(source, phase) {
+  return process.env.CAPTURE_SUPABASE_FIRST === 'true' && Boolean(source) && phase !== 'partial'
+    && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY);
+}
 async function capture(raw, payload, options = {}) {
   const endpoint = options.endpoint !== undefined ? options.endpoint : (options.phase === 'partial' ? process.env.CRM_CAPTURE_PARTIAL_URL : options.phase === 'instagram' ? process.env.CRM_CAPTURE_INSTAGRAM_URL : process.env.CRM_CAPTURE_URL);
-  if (!endpoint || !/^https:\/\//.test(endpoint)) throw new Error('capture_not_configured');
   const body = buildCapture(raw, payload, options);
-  const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': body.submission_id }, body: JSON.stringify(body), signal: AbortSignal.timeout(12000), redirect: 'error' });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || result.received !== true) throw new Error('capture_not_received');
-  return { ok: true, received: true, submission_id: body.submission_id };
+  const key = body.submission_id;
+  const phase = body.attribution.extra.phase;
+  const first = supabaseFirst(options.source, phase);
+  const marketing = body.attribution.extra.marketing;
+  const complete = first && phase === 'complete' && marketing && marketing.operation === 'insert';
+  if (complete) { // a chave não muda com isto: o hash cobre answers (= rawBody inteiro, contato incluso), não marketing
+    marketing.row.capture_key = key;
+    marketing.operation = 'upsert';
+    marketing.conflict_key = 'capture_key';
+  }
+  const log = (step, err) => console.error('[capture] ' + step + ' falhou', { submission_id: key, message: err && err.message });
+  // ponytail: lead_capturas e CRM saem juntos (pior caso 8 s, cabe no maxDuration 10 s). A linha da
+  // [Leads] só entra depois do lead_capturas confirmar (3 s + 3 s < 8 s): sem isso ela ficaria órfã,
+  // fora do alcance do reconciliador, que só lê lead_capturas.
+  let sbUncertain = false; // timeout/rede/502/504 no lead_capturas: o Postgres pode ter commitado
+  const saved = !first ? Promise.resolve(false) : supabaseInsert('lead_capturas', { capture_key: key, source: options.source, capture_phase: phase, capture_payload: body }, 'resolution=ignore-duplicates,return=minimal')
+    .then(() => true, err => { sbUncertain = !/^supabase_(http_(?!50[24]$)\d+|not_configured)$/.test(err.message); log('lead_capturas', err); return false; });
+  const row = complete ? saved.then(ok => ok && supabaseInsert(`${encodeURIComponent(marketing.table)}?on_conflict=capture_key`, marketing.row, 'resolution=ignore-duplicates,return=minimal').catch(err => log('leads_row', err))) : null;
+  let uncertain = false; // sem resposta HTTP (timeout/rede) ou 500/502/504: o CRM pode ter gravado
+  let conflict = false; // 409 = mesma chave (mesmo rawBody), outro corpo: ex. gate CAPTURE_SUPABASE_FIRST ou tags trocados
+  // entre tentativas. Lead que corrige e-mail/whatsapp NÃO cai aqui: answers muda, a chave é nova e o CRM
+  // abre outra captura (comportamento anterior ao branch; dedup é decisão do dono, mexe na distribuição).
+  const crm = (async () => {
+    if (!endpoint || !/^https:\/\//.test(endpoint)) throw new Error('capture_not_configured');
+    uncertain = true;
+    const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000), redirect: 'error' });
+    uncertain = response.status >= 500 && response.status !== 503;
+    conflict = response.status === 409;
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.received !== true) throw new Error(`crm_http_${response.status}`);
+  })().then(() => true, err => { log(conflict ? 'capture_key_conflict' : 'crm', err); return false; });
+  const [savedOk, crmOk] = await Promise.all([saved, crm, row]);
+  if (crmOk) return { ok: true, received: true, submission_id: key };
+  // Contrato §3: 409 nunca vira queued (lead_capturas guardou o payload antigo). Vira "uncertain" pro
+  // front não reabrir o beacon de parcial num lead que o CRM já distribuiu.
+  if (conflict) throw new Error('capture_uncertain');
+  if (savedOk) return { ok: true, received: true, queued: true, submission_id: key };
+  throw new Error(uncertain || sbUncertain ? 'capture_uncertain' : 'capture_not_received');
 }
 module.exports = { captureEnabled, buildCapture, capture };
