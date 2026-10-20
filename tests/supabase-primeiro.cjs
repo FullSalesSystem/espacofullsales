@@ -9,7 +9,7 @@ let sent, crmStatus, sbStatus;
 global.fetch = async (url, init) => {
   sent.push({ url, init, body: JSON.parse(init.body) });
   if (url.startsWith('https://crm.')) return crmStatus === 0 ? Promise.reject(new Error('timeout')) : Response.json(crmStatus < 300 ? { received: true } : {}, { status: crmStatus });
-  return new Response(null, { status: sbStatus });
+  return sbStatus === 0 ? Promise.reject(new Error('timeout')) : new Response(null, { status: sbStatus });
 };
 const reset = (crm, sb) => { sent = []; crmStatus = crm; sbStatus = sb; };
 const raw = { submission_id: 'espaco_fixture_01', submitted_at: '2026-10-19T12:00:00.000Z', page: 'https://espaco.example.com/', nome: 'Fixture Teste', email: 'fixture@example.com', whatsapp: '+55 11934172856', cargo: 'agencia', eventos: 'sim', instagram: '' };
@@ -30,15 +30,24 @@ const raw = { submission_id: 'espaco_fixture_01', submitted_at: '2026-10-19T12:0
   assert.deepEqual(row.body, m.row, 'linha do funil = marketing.row do CRM');
   assert.match(row.init.headers.Prefer, /ignore-duplicates/);
 
-  for (const crmFail of [503, 0, 409]) {
+  for (const crmFail of [503, 0]) {
     reset(crmFail, 201);
     r = await invoke(lead, raw);
     assert.equal(r.statusCode, 202, `CRM ${crmFail} com lead salvo vira 202`);
     assert.deepEqual([r.body.received, r.body.queued, r.body.submission_id], [true, true, key]);
   }
+  for (const sb of [201, 500]) {
+    reset(409, sb);
+    r = await invoke(lead, raw);
+    assert.deepEqual([r.statusCode, r.body.error], [503, 'crm_capture_uncertain'], `CRM 409 (Supabase ${sb}) nunca vira queued nem reabre parcial`);
+  }
   reset(503, 500);
   r = await invoke(lead, raw);
   assert.deepEqual([r.statusCode, r.body.error], [503, 'crm_capture_unavailable'], 'os dois fora com recusa certa: 503 unavailable');
+  assert.equal(sent.filter(s => s.url.includes('FAP06')).length, 0, 'sem lead_capturas não grava a linha da [Leads] (ficaria órfã)');
+  reset(503, 0);
+  r = await invoke(lead, raw);
+  assert.deepEqual([r.statusCode, r.body.error], [503, 'crm_capture_uncertain'], 'timeout no lead_capturas é ambíguo: não reabre parcial');
   for (const crmFail of [0, 504]) {
     reset(crmFail, 500);
     r = await invoke(lead, raw);
@@ -60,6 +69,9 @@ const raw = { submission_id: 'espaco_fixture_01', submitted_at: '2026-10-19T12:0
   assert.equal(sent.find(s => s.url.startsWith('https://crm.')).body.attribution.extra.marketing.operation, 'insert', 'flag desligado: insert antigo');
   reset(503, 201);
   assert.equal((await invoke(lead, raw)).statusCode, 503, 'flag desligado: CRM fora = 503 como antes');
+  reset(409, 201);
+  r = await invoke(lead, raw);
+  assert.deepEqual([r.statusCode, r.body.error], [503, 'crm_capture_uncertain'], 'flag desligado: 409 não libera o beacon de parcial');
   process.env.CAPTURE_SUPABASE_FIRST = 'true';
 
   reset(201, 201);
@@ -76,5 +88,5 @@ const raw = { submission_id: 'espaco_fixture_01', submitted_at: '2026-10-19T12:0
   assert.deepEqual(await post(async () => new Response('<html>504</html>', { status: 504 })), { ok: false, down: false });
   assert.deepEqual(await post(async () => { throw new Error('offline'); }), { ok: false, down: false });
   assert.deepEqual(await post(async () => Response.json({ ok: true, received: true, queued: true }, { status: 202 })), { ok: true, down: false });
-  console.log('PASS supabase primeiro: corpo único, linha = marketing.row, 202 queued, 503 só com os dois fora, gate CAPTURE_SUPABASE_FIRST, parcial fora da fila');
+  console.log('PASS supabase primeiro: corpo único, linha = marketing.row, 202 queued, 409 = uncertain sem fila, linha [Leads] só após lead_capturas, 503 só com os dois fora, gate CAPTURE_SUPABASE_FIRST, parcial fora da fila');
 })().catch(e => { process.stderr.write(String(e.stack) + '\n'); process.exitCode = 1; });

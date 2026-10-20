@@ -82,23 +82,30 @@ async function capture(raw, payload, options = {}) {
     marketing.conflict_key = 'capture_key';
   }
   const log = (step, err) => console.error('[capture] ' + step + ' falhou', { submission_id: key, message: err && err.message });
-  // ponytail: Supabase e CRM saem juntos (pior caso 8 s, cabe no maxDuration 10 s). A ordem não importa:
-  // o reconciliador só olha linhas com 3+ min e as duas escritas no Supabase são ignore-duplicates.
+  // ponytail: lead_capturas e CRM saem juntos (pior caso 8 s, cabe no maxDuration 10 s). A linha da
+  // [Leads] só entra depois do lead_capturas confirmar (3 s + 3 s < 8 s): sem isso ela ficaria órfã,
+  // fora do alcance do reconciliador, que só lê lead_capturas.
+  let sbUncertain = false; // timeout/rede/502/504 no lead_capturas: o Postgres pode ter commitado
   const saved = !first ? Promise.resolve(false) : supabaseInsert('lead_capturas', { capture_key: key, source: options.source, capture_phase: phase, capture_payload: body }, 'resolution=ignore-duplicates,return=minimal')
-    .then(() => true, err => { log('lead_capturas', err); return false; });
-  const row = complete ? supabaseInsert(`${encodeURIComponent(marketing.table)}?on_conflict=capture_key`, marketing.row, 'resolution=ignore-duplicates,return=minimal').catch(err => log('leads_row', err)) : null;
+    .then(() => true, err => { sbUncertain = !/^supabase_(http_(?!50[24]$)\d+|not_configured)$/.test(err.message); log('lead_capturas', err); return false; });
+  const row = complete ? saved.then(ok => ok && supabaseInsert(`${encodeURIComponent(marketing.table)}?on_conflict=capture_key`, marketing.row, 'resolution=ignore-duplicates,return=minimal').catch(err => log('leads_row', err))) : null;
   let uncertain = false; // sem resposta HTTP (timeout/rede) ou 500/502/504: o CRM pode ter gravado
+  let conflict = false; // 409 = mesma chave, outro conteúdo (lead corrigiu contato): o CRM já tem a captura
   const crm = (async () => {
     if (!endpoint || !/^https:\/\//.test(endpoint)) throw new Error('capture_not_configured');
     uncertain = true;
     const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000), redirect: 'error' });
     uncertain = response.status >= 500 && response.status !== 503;
+    conflict = response.status === 409;
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.received !== true) throw new Error(`crm_http_${response.status}`);
-  })().then(() => true, err => { log('crm', err); return false; });
+  })().then(() => true, err => { log(conflict ? 'capture_key_conflict' : 'crm', err); return false; });
   const [savedOk, crmOk] = await Promise.all([saved, crm, row]);
   if (crmOk) return { ok: true, received: true, submission_id: key };
+  // Contrato §3: 409 nunca vira queued (lead_capturas guardou o payload antigo). Vira "uncertain" pro
+  // front não reabrir o beacon de parcial num lead que o CRM já distribuiu.
+  if (conflict) throw new Error('capture_uncertain');
   if (savedOk) return { ok: true, received: true, queued: true, submission_id: key };
-  throw new Error(uncertain ? 'capture_uncertain' : 'capture_not_received');
+  throw new Error(uncertain || sbUncertain ? 'capture_uncertain' : 'capture_not_received');
 }
 module.exports = { captureEnabled, buildCapture, capture };
