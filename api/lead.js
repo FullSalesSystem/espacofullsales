@@ -5,9 +5,7 @@ const MAX_REQUESTS_PER_WINDOW = 10;
 const ipBucket = new Map();
 const EVENTOS_PIPELINE_ID = 'FsF7Yf61UwR8Gt3ZyOsx';
 const EVENTOS_STAGE_ENTRADA_ID = '81f2cde3-6fba-4f81-9d9a-64f82947f89f';
-const MARINA_USER_ID = 'wkhJfnKwiXgvvcjwKAE8';   // Marina Valois
-const RICARDO_USER_ID = 'Zy81V8eIFy85ooQzwRWl';  // Ricardo Patreze
-const MARINA_TARGET_SHARE = 0.6;                 // 60/40 rebalance
+const HEDU_USER_ID = 'dcCkJtqCG1iNeJvcU1eu';     // Heduallens Silva: recebe todo lead do Espaço (03/11/2026)
 const LEAD_SOURCE = 'FAP06 - Espaço de Eventos';
 const SUPABASE_TABLE = '[Leads] FAP06';
 /* Custom field GHL "Qual o seu perfil do Instagram?" (mesmo do FAP01) */
@@ -366,56 +364,6 @@ async function updateContactSource(ghlBaseUrl, pitToken, contactId) {
   return response.ok;
 }
 
-/* Round-robin ponderado 60/40 entre Marina e Ricardo, baseado em
-   contagem de oportunidades ABERTAS já atribuídas a cada um dentro
-   da pipeline "10. Eventos". Fallback: se falhar, atribui a Marina. */
-async function chooseAssignee(ghlBaseUrl, pitToken, locationId) {
-  try {
-    const query = new URLSearchParams({
-      location_id: locationId,
-      pipeline_id: EVENTOS_PIPELINE_ID,
-      status: 'open',
-      limit: '100',
-    });
-    const endpoint = `${ghlBaseUrl.replace(/\/+$/, '')}/opportunities/search?${query.toString()}`;
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${pitToken}`,
-        Accept: 'application/json',
-        Version: '2021-07-28',
-      },
-    });
-    const data = await response.json().catch(() => null);
-    const opps = (data && Array.isArray(data.opportunities)) ? data.opportunities : [];
-
-    let marinaCount = 0;
-    let ricardoCount = 0;
-    for (const op of opps) {
-      const owner = op.assignedTo || op.ownerId || '';
-      if (owner === MARINA_USER_ID) marinaCount += 1;
-      else if (owner === RICARDO_USER_ID) ricardoCount += 1;
-    }
-    const total = marinaCount + ricardoCount;
-
-    /* Cota da Marina ao final desta atribuição: 60% de (total+1).
-       Se ela ainda está abaixo da cota, vai pra ela; senão, Ricardo.
-       Sequência que emerge: M M R M R M M R M R ... (6:4 a cada 10). */
-    const marinaTargetAfter = (total + 1) * MARINA_TARGET_SHARE;
-    const chosen = marinaCount < marinaTargetAfter ? MARINA_USER_ID : RICARDO_USER_ID;
-
-    console.log('[assignee] rebalance', {
-      marinaCount,
-      ricardoCount,
-      chosen: chosen === MARINA_USER_ID ? 'Marina' : 'Ricardo',
-    });
-    return chosen;
-  } catch (err) {
-    console.error('[assignee] search failed, defaulting to Marina', { message: err && err.message });
-    return MARINA_USER_ID;
-  }
-}
-
 async function createOpportunityInEventos(ghlBaseUrl, pitToken, locationId, contactId, name, assignedUserId) {
   const endpoint = `${ghlBaseUrl.replace(/\/+$/, '')}/opportunities/`;
   const response = await fetch(endpoint, {
@@ -449,7 +397,7 @@ async function createOpportunityInEventos(ghlBaseUrl, pitToken, locationId, cont
   const data = await response.json().catch(() => null);
   console.log('[ghl] opp created in Eventos', {
     id: data && (data.opportunity?.id || data.id),
-    assignedTo: assignedUserId === MARINA_USER_ID ? 'Marina' : 'Ricardo',
+    assignedTo: assignedUserId,
   });
   return data;
 }
@@ -667,7 +615,7 @@ async function handler(req, res) {
          - Se tem opp ABERTA em Eventos → NÃO cria nova (GHL rejeita
            duplicata com 400 no mesmo pipeline). Time re-trabalha a existente.
          - Se só opps FECHADAS ou nenhuma → cria opp nova em "Entrada"
-           com assignee balanceado 60% Marina / 40% Ricardo. */
+           atribuída ao Hedu. */
       const opportunities = await searchContactOpportunities(ghlBaseUrl, pitToken, locationId, contactId);
       const eventosOpps = opportunities.filter((op) => op.pipelineId === EVENTOS_PIPELINE_ID);
       const hasOpenEventosOpp = eventosOpps.some((op) => op.status === 'open');
@@ -682,7 +630,7 @@ async function handler(req, res) {
           existingId: existing && existing.id,
         });
       } else {
-        const assignedUserId = await chooseAssignee(ghlBaseUrl, pitToken, locationId);
+        const assignedUserId = HEDU_USER_ID;
         await createOpportunityInEventos(
           ghlBaseUrl, pitToken, locationId, contactId, payload.nome, assignedUserId,
         );

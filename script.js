@@ -275,10 +275,10 @@ function postLeadToApi(payload) {
 }
 
 // Lead form modal
-/* Pós-envio vai direto pro WhatsApp do Vitor Bueno (16/10/2026). O link encurtado
-   antigo (links.fullsalessystem.com/espaco-fullsales-obg) caía no WhatsApp da Iza. */
-const THANK_YOU_URL = 'https://wa.me/5511920853945?text=' + encodeURIComponent(
-  'Oi, Vitor! Acabei de preencher o formulário do Espaço Full Sales e quero saber mais sobre o espaço pro meu evento.'
+/* Pós-envio vai direto pro WhatsApp do Heduallens (Hedu) desde 03/11/2026; antes era o Vitor.
+   O link encurtado antigo (links.fullsalessystem.com/espaco-fullsales-obg) caía no WhatsApp da Iza. */
+const THANK_YOU_URL = 'https://wa.me/5511921730259?text=' + encodeURIComponent(
+  'Oi, Hedu! Acabei de preencher o formulário do Espaço Full Sales e quero saber mais sobre o espaço pro meu evento.'
 );
 
 /* Segundo destino do lead (dual-write): API FSS Evento.
