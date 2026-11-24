@@ -22,7 +22,8 @@
   if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
   t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];
   s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init','288404690470754');fbq('track','PageView');
+  /* 24/11/2026 (spec 07): cookie fss_vid (UUID, 2 anos, domínio do Espaço) vira external_id no init e visitor_id no payload */
+  (function(w,d){var vid='';try{var c=d.cookie.match(/(?:^|;\s*)fss_vid=([^;]+)/);vid=c?decodeURIComponent(c[1]):'';if(!/^[0-9a-f-]{36}$/i.test(vid)){vid=w.crypto&&crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(x){var r=Math.random()*16|0;return(x==='x'?r:(r&3|8)).toString(16)})}vid=vid.toLowerCase();d.cookie='fss_vid='+vid+';path=/;max-age=63072000;SameSite=Lax'+(/(^|\.)fullsalessystem\.com$/.test(location.hostname)?';domain=.fullsalessystem.com':'')+(location.protocol==='https:'?';Secure':'')}catch(x){}w.__fssVid=vid;var ud={};if(vid)ud.external_id=vid;fbq('init','288404690470754',ud);fbq('track','PageView')})(window,document);
   </script>
   <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -603,7 +604,7 @@
   </footer>
 
   
-<script src="script.js?v=20261016-vitor" defer></script>
+<script src="script.js?v=20261124-vid" defer></script>
   <script src="espaco.js?v=20261111" defer></script>
 </body>
 </html>

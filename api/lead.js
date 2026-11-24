@@ -84,6 +84,8 @@ function validatePayload(input) {
     whatsapp: sanitizeText(input.whatsapp, 24),
     cargo: sanitizeText(input.cargo, 40),
     eventos: sanitizeText(input.eventos, 8).toLowerCase(),
+    /* fss_vid do navegador (UUID): vira external_id na CAPI, o mesmo que o pixel recebe no init */
+    visitor_id: /^[0-9a-f-]{36}$/i.test(String(input.visitor_id || '')) ? String(input.visitor_id).toLowerCase() : '',
     instagram: normalizeInstagram(input.instagram),
     utm_source: sanitizeText(input.utm_source, 120),
     utm_medium: sanitizeText(input.utm_medium, 120),
@@ -435,22 +437,29 @@ function readReqCookie(req, name) {
   return m ? decodeURIComponent(m[1]) : '';
 }
 
-/* user    = { nome, email, telefone, fbp, fbc, fbclid, url }
-   eventos = [{ name, id, custom }] — todos vao numa unica chamada.
-   Retorna quantos eventos a Meta aceitou (0 = sem token ou falha). */
-async function metaCapi(req, user, eventos) {
-  const token = metaCapiToken();
-  if (!token || !eventos.length) return 0;
+/* Nome pra Meta: minúsculo, sem acento e só letras (igual ao init do pixel) */
+function metaNome(nome) {
+  return String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z\s]/g, ' ').trim().split(/\s+/).filter(Boolean);
+}
 
+/* user_data da CAPI (24/11/2026, spec 07-external-id), mesma estrutura do fap01: em, ph, fn, ln,
+   country, external_id (sha256 do fss_vid), IP/UA do cliente, fbp e fbc (do cookie ou montado do
+   fbclid da URL da página). Nunca loga valor, só os nomes das chaves. */
+function metaUserData(req, user) {
   const userData = {};
   const em = metaHash(user.email);
   if (em) userData.em = [em];
   const fone = String(user.telefone || '').replace(/\D/g, '');
   if (fone) userData.ph = [metaHash(fone)];
-  const nome = String(user.nome || '').trim().split(/\s+/).filter(Boolean);
+  const nome = metaNome(user.nome);
   if (nome[0]) userData.fn = [metaHash(nome[0])];
-  if (nome.length > 1) userData.ln = [metaHash(nome.slice(1).join(' '))];
+  if (nome.length > 1) userData.ln = [metaHash(nome[nome.length - 1])];
   if (fone.startsWith('55')) userData.country = [metaHash('br')];
+  const vid = user.visitor_id || readReqCookie(req, 'fss_vid');
+  if (/^[0-9a-f-]{36}$/i.test(vid)) userData.external_id = [metaHash(vid)];
+  let fbclid = user.fbclid || '';
+  if (!fbclid && user.url) { try { fbclid = new URL(user.url).searchParams.get('fbclid') || ''; } catch (_) {} }
   const ip = getClientIp(req);
   if (ip && ip !== 'unknown') userData.client_ip_address = ip;
   const ua = req.headers && req.headers['user-agent'];
@@ -458,8 +467,18 @@ async function metaCapi(req, user, eventos) {
   const fbp = user.fbp || readReqCookie(req, '_fbp');
   if (fbp) userData.fbp = fbp;
   const fbc = user.fbc || readReqCookie(req, '_fbc')
-    || (user.fbclid ? 'fb.1.' + Date.now() + '.' + user.fbclid : '');
+    || (fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : '');
   if (fbc) userData.fbc = fbc;
+  return userData;
+}
+
+/* user    = { nome, email, telefone, fbp, fbc, fbclid, url, visitor_id }
+   eventos = [{ name, id, custom }] — todos vao numa unica chamada.
+   Retorna quantos eventos a Meta aceitou (0 = sem token ou falha). */
+async function metaCapi(req, user, eventos) {
+  const token = metaCapiToken();
+  if (!token || !eventos.length) return 0;
+  const userData = metaUserData(req, user);
 
   const now = Math.floor(Date.now() / 1000);
   const body = {
@@ -501,10 +520,14 @@ async function metaCapi(req, user, eventos) {
 }
 
 async function sendCapturedMeta(req, payload) {
-  if (payload.utm_source === 'e2e-check' || /\[TESTE/i.test(payload.nome)) return;
-  return await metaCapi(req, {
+  const user = {
     nome: payload.nome, email: payload.email, telefone: payload.whatsapp, url: payload.page,
-  }, [
+    visitor_id: payload.visitor_id,
+  };
+  /* só os NOMES das chaves (sem valor) voltam na resposta: prova no E2E sem mandar evento falso */
+  payload.capiUd = Object.keys(metaUserData(req, user));
+  if (payload.utm_source === 'e2e-check' || /\[TESTE/i.test(payload.nome)) return;
+  return await metaCapi(req, user, [
     { name: 'Lead', id: payload.submission_id },
     { name: 'Lead_qualificado_FAQ_06', id: payload.submission_id },
   ]);
@@ -553,7 +576,7 @@ async function handler(req, res) {
       options.ghlCustomFields = buildGhlPayload(payload, '').customFields || [];
       const result = await capture(rawBody, payload, options);
       await capi;
-      return json(res, result.queued ? 202 : 200, result);
+      return json(res, result.queued ? 202 : 200, { ...result, capi_ud: payload.capiUd });
     } catch (err) {
       console.error('[lead] capture falhou', { submission_id: payload.submission_id, message: err && err.message });
       await capi;
@@ -637,7 +660,7 @@ async function handler(req, res) {
       }
     }
 
-    return json(res, 202, { ok: true, classificacao, capi });
+    return json(res, 202, { ok: true, classificacao, capi, capi_ud: payload.capiUd });
   } catch (_) {
     return json(res, 502, { error: 'upstream_unreachable' });
   }

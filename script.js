@@ -549,6 +549,7 @@ if (leadForm) {
       cargo: answers.cargo,
       eventos: answers.eventos,
       instagram: '',
+      visitor_id: window.__fssVid || (document.cookie.match(/(?:^|;\s*)fss_vid=([^;]+)/) || [])[1] || '',
       ...getStoredUtms(),
     }).then(r => {
       /* só a falha certa libera o beacon de parcial; na ambígua o submit reenvia com a mesma chave */
