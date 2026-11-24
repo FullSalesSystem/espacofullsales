@@ -9,16 +9,20 @@
        event_id = submission_id. Pra Meta deduplicar, este stub anexa
        {eventID: window.__fssEventId} a toda chamada track/trackSingle feita sem
        opcoes enquanto o id estiver setado (script.js seta antes do push no
-       dataLayer). init e PageView continuam por conta do GTM. -->
+       dataLayer). Desde 24/11/2026 init e PageView saem AQUI, antes do GTM (connect rate);
+       o PageView do GTM é descartado pelo filtro do stub. -->
   <script>
   !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){
-    var a=Array.prototype.slice.call(arguments),m=a[0],
-        i=(m==='track'||m==='trackCustom')?3:((m==='trackSingle'||m==='trackSingleCustom')?4:-1);
+    var a=Array.prototype.slice.call(arguments),m=a[0];
+    /* 24/11/2026: só o 1º PageView passa (o inline abaixo); o trackSingle PageView do GTM é descartado */
+    if((m==='track'&&a[1]==='PageView')||(m==='trackSingle'&&a[2]==='PageView')){if(n._pv)return;n._pv=1}
+    var i=(m==='track'||m==='trackCustom')?3:((m==='trackSingle'||m==='trackSingleCustom')?4:-1);
     if(i>0&&f.__fssEventId&&a.length<=i){a[i-1]=a[i-1]||{};a[i]={eventID:f.__fssEventId};}
     n.callMethod?n.callMethod.apply(n,a):n.queue.push(a)};
   if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
   t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];
   s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init','288404690470754');fbq('track','PageView');
   </script>
   <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -44,9 +48,15 @@
   <meta name="theme-color" content="#0b0d10" />
   <link rel="icon" type="image/png" href="assets/images/icone-fullsales.png" />
   <link rel="apple-touch-icon" href="assets/images/icone-fullsales.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <!-- Fontes self-hosted (24/11/2026; antes Google Fonts, ~1 s de render-blocking no 4G) -->
+  <link rel="preload" href="assets/fonts/spacegrotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <style>
+@font-face{font-family:'Inter';font-style:normal;font-weight:300 800;font-display:swap;src:url(assets/fonts/inter-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Inter';font-style:normal;font-weight:300 800;font-display:swap;src:url(assets/fonts/inter-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:500 700;font-display:swap;src:url(assets/fonts/spacegrotesk-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:500 700;font-display:swap;src:url(assets/fonts/spacegrotesk-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  </style>
   <link rel="stylesheet" href="styles.css?v=20260827a" />
   <link rel="stylesheet" href="espaco.css?v=20261111" />
   <script>document.documentElement.classList.add('js')</script></head>
@@ -58,7 +68,7 @@
 <header class="site-header" id="top">
     <div class="container header-inner">
       <a href="#top" class="brand" aria-label="Espaço Full Sales, início">
-        <img src="assets/images/logo-fullsales.webp" alt="Full Sales" class="brand-logo" />
+        <img src="assets/images/logo-fullsales.webp" alt="Full Sales" class="brand-logo" width="400" height="125" />
       </a>
       <nav class="nav" aria-label="Navegação principal">
         <button class="nav-toggle" aria-expanded="false" aria-controls="primary-menu" aria-label="Abrir menu">
@@ -585,7 +595,7 @@
   <footer class="site-footer">
     <div class="container footer-inner">
       <div>
-        <img src="assets/images/logo-fullsales.webp" alt="Full Sales" class="footer-logo" />
+        <img src="assets/images/logo-fullsales.webp" alt="Full Sales" class="footer-logo" width="400" height="125" loading="lazy" />
         <p>Espaço Full Sales · Sky Corporate · Vila Olímpia, São Paulo</p>
       </div>
       <p class="copy">© <span id="year"></span> Full Sales. Todos os direitos reservados.</p>
